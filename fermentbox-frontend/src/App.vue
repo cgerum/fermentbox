@@ -45,7 +45,7 @@
         </v-list>
       </v-navigation-drawer>
 
-      <div v-if="page === 'controls'">
+      <div v-show="page === 'controls'">
         <div class="page-title">
           <v-icon large color="accent" class="page-title-icon">mdi-file-table-box-outline</v-icon>
           <span>Controls</span>
@@ -60,7 +60,7 @@
         </v-list>
       </div>
 
-      <div v-if="page === 'schedule'">
+      <div v-show="page === 'schedule'">
         <div class="page-title">
           <v-icon large color="accent" class="page-title-icon">mdi-timer-outline</v-icon>
           <span>Schedule</span>
@@ -68,7 +68,7 @@
         <schedule></schedule>
       </div>
 
-      <div v-if="page === 'settings'">
+      <div v-show="page === 'settings'">
         <div class="page-title">
           <v-icon large color="accent" class="page-title-icon">mdi-cogs</v-icon>
           <span>Settings</span>
@@ -99,6 +99,7 @@ import TemperatureControl from "./components/TemperatureControl";
 import HumidityControl from "./components/HumidityControl";
 import Schedule from "./components/Schedule";
 import Settings from "./components/Settings";
+import EventBus from "./event-bus.js"
 
 export default {
   name: "App",
@@ -116,11 +117,44 @@ export default {
     page: "controls"
   }),
 
+  created: function() {
+    this.startMeasurement()
+  },
+
   methods: {
     setPage(name) {
       this.page = name;
       this.drawer = false;
+    },
+
+    startMeasurement() {
+      this.measurements = []
+      setInterval(() => {
+        sendRequest('measurement').then((data) => {
+          this.measurements.push(data)
+          EventBus.$emit('new-measurement', data)
+        })
+      }, 5000)
     }
+
   }
 };
+
+function sendRequest(url) {
+    return new Promise((resolve, reject) => {
+        const xhr = new XMLHttpRequest()
+        xhr.onreadystatechange = () => {
+            if (xhr.readyState === 4) {
+                if( xhr.status === 200) {
+                    resolve(JSON.parse(xhr.responseText))
+                } else {
+                    reject(xhr.statusText)
+                }
+            } 
+        }
+        xhr.open('GET', url, true)
+        xhr.send()
+    })        
+}
+
 </script>
