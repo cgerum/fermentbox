@@ -23,9 +23,12 @@ void startSensors() {
 void Sensors::readMeasurement(Measurement &ms){
     int random = rand();
 
+    
+	DateTime currentDate = SystemClock.now();
     TempAndHumidity th = dht.getTempAndHumidity();
 
     if (dht.getStatus() == DHTesp::ERROR_NONE){
+        ms.date = currentDate;
         ms.temperature = th.temperature;
         ms.humidity = th.humidity;
     }else{

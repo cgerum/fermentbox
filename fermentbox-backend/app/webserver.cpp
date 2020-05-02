@@ -159,13 +159,10 @@ void onGetMeasurement(HttpRequest& request, HttpResponse& response)
 	JsonObjectStream* stream = new JsonObjectStream();
 	JsonObject json = stream->getRoot();
 
-	DateTime currentTime = SystemClock.now();
-
 	Sensors& sensors = getSensors();
-	Sensors::Measurement measurement;
-	sensors.readMeasurement(measurement);
+	Sensors::Measurement &measurement = sensors.getLastMeasurement();
 
-    json["date"] = currentTime.toISO8601();
+    json["date"] = measurement.date.toISO8601();
 	json["temperature"] = measurement.temperature;
 	json["humidity"] = measurement.humidity; 
 
