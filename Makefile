@@ -19,7 +19,7 @@ frontend:
 
 .PHONY: backend
 backend:
-    make -C fermentbox-backend spiffs-image-update
+	make -C fermentbox-backend spiffs-image-update
 	make -C fermentbox-backend rebuild
 
 
