@@ -19,11 +19,12 @@ frontend:
 
 .PHONY: backend
 backend:
-	make -C fermentbox-backend
+    make -C fermentbox-backend spiffs-image-update
+	make -C fermentbox-backend rebuild
 
 
 .PHONY: flash
-flash:
+flash: all
 	make -C fermentbox-backend flash
 
 .PHONY: clean
