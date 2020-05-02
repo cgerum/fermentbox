@@ -6,6 +6,8 @@
 #include "sensors.h"
 
 
+NtpClient ntpClient("pool.ntp.org", 30);
+
 static void WifiDisconnect(const String& ssid, MacAddress bssid, WifiDisconnectReason reason)
 {
 	debugf("DISCONNECT - SSID: %s, REASON: %s\n", ssid.c_str(), WifiEvents.getDisconnectReasonDesc(reason).c_str());
