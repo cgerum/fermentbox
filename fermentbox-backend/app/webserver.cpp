@@ -4,6 +4,7 @@
 
 #include "webserver.h"
 #include "configuration.h"
+#include "sensors.h"
 
 bool serverStarted = false;
 HttpServer server;
@@ -153,13 +154,20 @@ void onFile(HttpRequest& request, HttpResponse& response)
 	}
 }
 
-void onAjaxGetState(HttpRequest& request, HttpResponse& response)
+void onGetMeasurement(HttpRequest& request, HttpResponse& response)
 {
 	JsonObjectStream* stream = new JsonObjectStream();
 	JsonObject json = stream->getRoot();
 
-	json["temperature"] = 20.5f;
-	json["humidity"] = 56.4f; 
+	DateTime currentTime = SystemClock.now();
+
+	Sensors& sensors = getSensors();
+	Sensors::Measurement measurement;
+	sensors.readMeasurement(measurement);
+
+    json["date"] = currentTime.toISO8601();
+	json["temperature"] = measurement.temperature;
+	json["humidity"] = measurement.humidity; 
 
 	response.sendDataStream(stream, MIME_JSON);
 }
@@ -173,7 +181,7 @@ void startWebServer()
 	server.paths.set("/", onIndex);
 	server.paths.set("/config", onConfiguration);
 	server.paths.set("/config.json", onConfigurationJson);
-	server.paths.set("/state", onAjaxGetState);
+	server.paths.set("/measurement", onGetMeasurement);
 	server.paths.setDefault(onFile);
 	server.setBodyParser(MIME_JSON, bodyToStringParser);
 	serverStarted = true;

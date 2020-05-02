@@ -1,4 +1,4 @@
-ARDUINO_LIBRARIES := ArduinoJson6
+ARDUINO_LIBRARIES := ArduinoJson6 DHTesp
 
 SPIFF_SIZE		?= 196608
 

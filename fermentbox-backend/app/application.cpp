@@ -3,6 +3,7 @@
 
 #include "webserver.h"
 #include "configuration.h"
+#include "sensors.h"
 
 
 static Timer counterTimer;
@@ -60,6 +61,7 @@ void init()
 	WifiEvents.onStationGotIP(STAGotIP);
 
 	startWebServer();
+	startSensors();
 
 	counterTimer.initializeMs(1000, counterLoop).start();
 }
