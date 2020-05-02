@@ -71,14 +71,8 @@ void onIndex(HttpRequest& request, HttpResponse& response)
 	sendFile("index.html", response);
 }
 
-void onConfiguration(HttpRequest& request, HttpResponse& response)
+void onNetworkConfig(HttpRequest& request, HttpResponse& response)
 {
-	if(request.method == HTTP_GET) {
-		response.setCache(86400, true); // It's important to use cache for better performance.
-		sendFile("config.html", response);
-		return;
-	}
-
 	if(request.method != HTTP_POST) {
 		response.code = HTTP_STATUS_BAD_REQUEST;
 		return;
@@ -103,42 +97,32 @@ void onConfiguration(HttpRequest& request, HttpResponse& response)
 
 	Json::serialize(root, Serial, Json::Pretty); // For debugging
 
-	if(root.containsKey("StaSSID")) // Settings
+	if(root.containsKey("SSID")) // Settings
 	{
-		uint8_t prevStaEnable = activeConfig.StaEnable;
-
-		activeConfig.StaSSID = String((const char*)root["StaSSID"]);
-		activeConfig.StaPassword = String((const char*)root["StaPassword"]);
-		activeConfig.StaEnable = root["StaEnable"];
-
-		if(prevStaEnable && activeConfig.StaEnable) {
-			WifiStation.enable(true);
-			WifiAccessPoint.enable(false);
-			WifiStation.config(activeConfig.StaSSID, activeConfig.StaPassword);
-		} else if(activeConfig.StaEnable) {
-			WifiStation.enable(true, true);
-			WifiAccessPoint.enable(false, true);
-			WifiStation.config(activeConfig.StaSSID, activeConfig.StaPassword);
-		} else {
-			WifiStation.enable(false, true);
-			WifiAccessPoint.enable(true, true);
-			WifiAccessPoint.config("Fermentbox", "ENTERYOURPASSWD", AUTH_WPA2_PSK);
-		}
+		activeConfig.Wifi.SSID = String((const char*)root["SSID"]);
+		activeConfig.Wifi.Password = String((const char*)root["Password"]);
+		
+		
+		WifiStation.enable(true);
+		WifiAccessPoint.enable(false);
+		WifiStation.config(activeConfig.Wifi.SSID, activeConfig.Wifi.Password);
 	}
 
 	activeConfig.save();
 }
 
-void onConfigurationJson(HttpRequest& request, HttpResponse& response)
+void onGetConfig(HttpRequest& request, HttpResponse& response)
 {
 	JsonObjectStream* stream = new JsonObjectStream();
 	JsonObject json = stream->getRoot();
 
 	FermentboxConfig& activeConfig = FermentboxConfig::get();
 
-	json["StaSSID"] = activeConfig.StaSSID;
-	json["StaPassword"] = activeConfig.StaPassword;
-	json["StaEnable"] = activeConfig.StaEnable;
+	auto network = json.createNestedObject("Wifi");
+
+	network["SSID"] = activeConfig.Wifi.SSID;
+	network["Password"] = activeConfig.Wifi.Password;
+
 
 	response.sendDataStream(stream, MIME_JSON);
 }
@@ -176,9 +160,9 @@ void startWebServer()
 
 	server.listen(80);
 	server.paths.set("/", onIndex);
-	server.paths.set("/config", onConfiguration);
-	server.paths.set("/config.json", onConfigurationJson);
-	server.paths.set("/measurement", onGetMeasurement);
+	server.paths.set("/networkConfig", onNetworkConfig);
+	server.paths.set("/getConfig", onGetConfig);
+	server.paths.set("/getMeasurement", onGetMeasurement);
 	server.paths.setDefault(onFile);
 	server.setBodyParser(MIME_JSON, bodyToStringParser);
 	serverStarted = true;

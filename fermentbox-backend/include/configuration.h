@@ -10,15 +10,14 @@ const uint8_t ConfigJsonBufferSize = 200;
 
 class FermentboxConfig {
   public: 
-	FermentboxConfig()
-	{
-		StaEnable = 1; //Enable WIFI Client
-	}
+	FermentboxConfig() {}
+	struct WifiConfig {
+		String SSID;
+		String Password;
+	};
 
-	String StaSSID;
-	String StaPassword;
-	uint8_t StaEnable;
-    
+	WifiConfig Wifi;
+	
     static FermentboxConfig& load();
     static FermentboxConfig& get();
 	void save();

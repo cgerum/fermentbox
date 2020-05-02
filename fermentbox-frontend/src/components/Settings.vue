@@ -32,7 +32,7 @@
             <span class="card-title">Wi-Fi</span>
           </v-card-title>
           <v-card-text>
-            <v-text-field v-model="wifiName" label="Name" clearable></v-text-field>
+            <v-text-field v-model="wifiSSID" label="SSID" clearable>{{wifiSSID}}</v-text-field>
             <v-text-field
               v-model="wifiPassword"
               label="Password"
@@ -40,11 +40,13 @@
               :append-icon="showWifiPassword ? 'mdi-eye' : 'mdi-eye-off'"
               @click:append="showWifiPassword = !showWifiPassword"
               clearable
-            ></v-text-field>
+            >
+            {{wifiPassword}}
+            </v-text-field>
           </v-card-text>
           <v-card-actions>
             <v-spacer></v-spacer>
-            <v-btn depressed color="accent">Save Credentials</v-btn>
+            <v-btn depressed color="accent">Save WIFI Credentials</v-btn>
           </v-card-actions>
         </v-card>
       </v-list-item-content>
@@ -66,40 +68,31 @@
 </style>
 
 <script>
+import sendRequest from '../requests.js'
+
 export default {
   name: "Settings",
 
   data: () => ({
     appPassword: null,
     showAppPassword: false,
-    wifiName: null,
+    wifiSSID: null,
     wifiPassword: null,
     showWifiPassword: false
   }),
   created: function() {
-    this.loadAppPassword();
-    this.loadWifiName();
-    this.loadWifiPassword();
+    this.getConfig();
   },
   methods: {
-    loadAppPassword: function() {
-      // TODO load app password
-    },
     storeAppPassword: function() {
       // TODO store app password
     },
-    loadWifiName: function() {
-      // TODO load wifi name
-    },
-    storeWifiName: function() {
-      // TODO store wifi name
-    },
-    loadWifiPassword: function() {
-      // TODO load wifi password
-    },
-    storeWifiPassword: function() {
-      // TODO store wifi password
-    }
+    getConfig: function() {
+      sendRequest('getConfig').then((data) => {
+        this.wifiSSID = data.Wifi.SSID
+        this.wifiPassword = data.Wifi.Password
+      })
+    } 
   }
 };
 </script>

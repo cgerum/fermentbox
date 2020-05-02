@@ -14,14 +14,13 @@ FermentboxConfig& FermentboxConfig::load()
 
 	StaticJsonDocument<ConfigJsonBufferSize> doc;
 	if(Json::loadFromFile(doc, FERMENTBOX_CONFIG_FILE)) {
-		JsonObject network = doc["network"];
-		Config.StaSSID = network["StaSSID"].as<const char*>();
-		Config.StaPassword = network["StaPassword"].as<const char*>();
-		Config.StaEnable = network["StaEnable"];
+		JsonObject network = doc["Wifi"];
+		Config.Wifi.SSID = network["SSID"].as<const char*>();
+		Config.Wifi.Password = network["Password"].as<const char*>();
 	} else {
 		// Factory defaults if no config file present, or could not access it
-		Config.StaSSID = WIFI_SSID;
-		Config.StaPassword = WIFI_PWD;
+		Config.Wifi.SSID = WIFI_SSID;
+		Config.Wifi.Password = WIFI_PWD;
 	}
 	return Config;
 }
@@ -34,10 +33,9 @@ void FermentboxConfig::save()
 {
 	StaticJsonDocument<ConfigJsonBufferSize> doc;
 
-	JsonObject network = doc.createNestedObject("network");
-	network["StaSSID"] = Config.StaSSID;
-	network["StaPassword"] = Config.StaPassword;
-	network["StaEnable"] = Config.StaEnable;
-
+	JsonObject network = doc.createNestedObject("Wifi");
+	network["SSID"] = Config.Wifi.SSID;
+	network["Password"] = Config.Wifi.Password;
+	
 	Json::saveToFile(doc, FERMENTBOX_CONFIG_FILE, Json::Pretty);
 }

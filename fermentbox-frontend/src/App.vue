@@ -100,6 +100,7 @@ import HumidityControl from "./components/HumidityControl";
 import Schedule from "./components/Schedule";
 import Settings from "./components/Settings";
 import EventBus from "./event-bus.js"
+import sendRequest from "./requests.js"
 
 export default {
   name: "App",
@@ -130,7 +131,7 @@ export default {
     startMeasurement() {
       this.measurements = []
       setInterval(() => {
-        sendRequest('measurement').then((data) => {
+        sendRequest('getMeasurement').then((data) => {
           this.measurements.push(data)
           EventBus.$emit('new-measurement', data)
         })
@@ -139,22 +140,5 @@ export default {
 
   }
 };
-
-function sendRequest(url) {
-    return new Promise((resolve, reject) => {
-        const xhr = new XMLHttpRequest()
-        xhr.onreadystatechange = () => {
-            if (xhr.readyState === 4) {
-                if( xhr.status === 200) {
-                    resolve(JSON.parse(xhr.responseText))
-                } else {
-                    reject(xhr.statusText)
-                }
-            } 
-        }
-        xhr.open('GET', url, true)
-        xhr.send()
-    })        
-}
 
 </script>

@@ -6,15 +6,7 @@
 #include "sensors.h"
 
 
-static Timer counterTimer;
-unsigned long counter = 0;
-
-static void counterLoop()
-{
-	counter++;
-}
-
-static void STADisconnect(const String& ssid, MacAddress bssid, WifiDisconnectReason reason)
+static void WifiDisconnect(const String& ssid, MacAddress bssid, WifiDisconnectReason reason)
 {
 	debugf("DISCONNECT - SSID: %s, REASON: %s\n", ssid.c_str(), WifiEvents.getDisconnectReasonDesc(reason).c_str());
 
@@ -26,7 +18,7 @@ static void STADisconnect(const String& ssid, MacAddress bssid, WifiDisconnectRe
 	}
 }
 
-static void STAGotIP(IpAddress ip, IpAddress mask, IpAddress gateway)
+static void WifiGotIP(IpAddress ip, IpAddress mask, IpAddress gateway)
 {
 	debugf("GOTIP - IP: %s, MASK: %s, GW: %s\n", ip.toString().c_str(), mask.toString().c_str(),
 		   gateway.toString().c_str());
@@ -47,21 +39,19 @@ void init()
 	spiffs_mount(); // Mount file system, in order to work with files
 
 	//SET higher CPU freq & disable wifi sleep
-	//	system_update_cpu_freq(SYS_CPU_160MHZ);
+	system_update_cpu_freq(SYS_CPU_160MHZ);
 	wifi_set_sleep_type(NONE_SLEEP_T);
 
 	FermentboxConfig activeConfig = FermentboxConfig::load();
-	if(activeConfig.StaSSID) {
+	if(activeConfig.Wifi.SSID) {
 		WifiStation.enable(true);
-		WifiStation.config(activeConfig.StaSSID, activeConfig.StaPassword);
+		WifiStation.config(activeConfig.Wifi.SSID, activeConfig.Wifi.Password);
 	}
 
 	// Attach Wifi events handlers
-	WifiEvents.onStationDisconnect(STADisconnect);
-	WifiEvents.onStationGotIP(STAGotIP);
+	WifiEvents.onStationDisconnect(WifiDisconnect);
+	WifiEvents.onStationGotIP(WifiGotIP);
 
 	startWebServer();
-	startSensors();
-
-	counterTimer.initializeMs(1000, counterLoop).start();
+	startSensors();    
 }
