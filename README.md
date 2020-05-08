@@ -7,7 +7,7 @@
 
 According to https://techtutorialsx.com/2017/04/02/esp8266-nodemcu-pin-mappings/ the NodeMCU pin mappings are:
 
-    D0 = GPIO16;
+    D0 = GPIO16; DHT
     D1 = GPIO5;
     D2 = GPIO4;
     D3 = GPIO0;
