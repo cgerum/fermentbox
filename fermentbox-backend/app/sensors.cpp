@@ -44,7 +44,7 @@ static void timerCallback(){
 }
 
 void Sensors::start(){
-    timer.initializeMs(5*1000, timerCallback).start();
+    timer.initializeMs(2*1000, timerCallback).start();
 }
 
 void Sensors::onTimer(){
