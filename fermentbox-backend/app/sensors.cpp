@@ -6,7 +6,7 @@
 #include "sensors.h"
 
 
-#define WORK_PIN 16
+#define DHT_WORK_PIN 16
 
 static DHTesp dht;
 static Sensors currentSensors; 
@@ -16,8 +16,8 @@ Sensors& getSensors(){
 }
 
 void startSensors() {
+    dht.setup(DHT_WORK_PIN, DHTesp::DHT22);
     currentSensors.start();
-    dht.setup(WORK_PIN, DHTesp::DHT22);
 }
 
 void Sensors::readMeasurement(Measurement &ms){
@@ -44,7 +44,7 @@ static void timerCallback(){
 }
 
 void Sensors::start(){
-    timer.initializeMs(2*1000, timerCallback).start();
+    timer.initializeMs(dht.getMinimumSamplingPeriod(), timerCallback).start();
 }
 
 void Sensors::onTimer(){
