@@ -3,7 +3,9 @@
         {
             "name": "Linux",
             "includePath": [
-                "${workspaceFolder}/**", "${ESP_HOME}/xtensa-lx106-elf/xtensa-lx106-elf/include", "${SMING_HOME}", "${SMING_HOME}/system/include"
+                "${workspaceFolder}/**",
+                "${ESP_HOME}/xtensa-lx106-elf/**",
+                "${SMING_HOME}/**"
             ],
             "defines": [],
             "compilerPath": "/usr/bin/gcc",
