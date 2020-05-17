@@ -6,55 +6,8 @@
 #include "configuration.h"
 #include "sensors.h"
 
-bool serverStarted = false;
-HttpServer server;
-
-#if DISABLE_SPIFFS
-
-// If a filesystem image hasn't been provided, serve the files using a FlashString map
-#define FILE_LIST(XX)                                                                                                  \
-	XX(bootstrap, "bootstrap.min.css.gz")                                                                              \
-	XX(config_html, "config.html")                                                                                     \
-	XX(config_js, "config.js")                                                                                         \
-	XX(index_html, "index.html")                                                                                       \
-	XX(index_js, "index.js")                                                                                           \
-	XX(jquery, "jquery-2.1.4.min.js.gz")
-
-// Define the names for each file
-#define XX(name, file) DEFINE_FSTR_LOCAL(KEY_##name, file)
-FILE_LIST(XX)
-#undef XX
-
-// Import content for each file
-#define XX(name, file) IMPORT_FSTR_LOCAL(CONTENT_##name, PROJECT_DIR "/files/" file);
-FILE_LIST(XX)
-#undef XX
-
-// Define the table structure linking key => content
-#define XX(name, file) {&KEY_##name, &CONTENT_##name},
-DEFINE_FSTR_MAP_LOCAL(fileMap, FlashString, FlashString, FILE_LIST(XX));
-#undef XX
-
-static bool sendFile(const String& fileName, HttpResponse& response)
-{
-	String compressed = fileName + ".gz";
-	auto v = fileMap[compressed];
-	if(v) {
-		response.headers[HTTP_HEADER_CONTENT_ENCODING] = _F("gzip");
-	} else {
-		v = fileMap[fileName];
-		if(!v) {
-			debug_w("File '%s' not found", fileName.c_str());
-			return false;
-		}
-	}
-
-	debug_i("found %s in fileMap", String(v.key()).c_str());
-	auto stream = new FSTR::Stream(v.content());
-	return response.sendDataStream(stream, ContentType::fromFullFileName(fileName));
-}
-
-#else
+static bool serverStarted = false;
+static HttpServer server;
 
 static bool sendFile(const String& fileName, HttpResponse& response)
 {
@@ -62,8 +15,6 @@ static bool sendFile(const String& fileName, HttpResponse& response)
 
 	return response.sendFile(fileName);
 }
-
-#endif
 
 void onIndex(HttpRequest& request, HttpResponse& response)
 {
