@@ -5,15 +5,16 @@
 #include <SmingCore.h>
 
 //All outputs are low active
-#define HEATER_PIN      14
-#define COOLER_PIN      12
-#define VENTILATOR_PIN  13
+#define HEATER_PIN      14  //D5
+#define COOLER_PIN      12  //D6
+#define VENTILATOR_PIN  13  //D7
 #define HUMIDIFIER_PIN   2
 
 #define HYSTERESIS     0.00f
 #define COOLDOWN       180
 
 struct ControlLoopState {
+    bool active;
     float target_temperature;
     float target_humidity;
 
@@ -28,6 +29,15 @@ struct ControlLoopState {
 static ControlLoopState state;
 
 void onControlStep(){
+
+    if(!state.active){
+        digitalWrite(HEATER_PIN, 1);
+        digitalWrite(COOLER_PIN, 1);
+        digitalWrite(VENTILATOR_PIN, 1);
+        digitalWrite(HUMIDIFIER_PIN, 1);
+        return;
+    }
+
     Sensors& sensors = getSensors();
     Sensors::Measurement& measurement = sensors.getLastMeasurement();
 
@@ -112,7 +122,8 @@ void onControlStep(){
 void startControlLoop(){
     state.timer.initializeMs(1000, onControlStep).start();
 
-    state.target_temperature = 30.0f;
+    state.active = false;
+    state.target_temperature = -3.0f;
     state.target_humidity = 50.0f;
 
     //Initialize IO
