@@ -1,28 +1,27 @@
-#pragma once 
+#pragma once
 
 #include <SmingCore.h>
 
 class Sensors {
-    public:
-    struct Measurement {
-        DateTime date;
-        float temperature;
-        float humidity;
-    };
+public:
+  struct Measurement {
+    DateTime date;
+    float temperature;
+    float humidity;
+  };
 
-    void start();
-    Measurement &getLastMeasurement() { return lastMeasurement; }
+  void start();
+  Measurement &getLastMeasurement() { return lastMeasurement; }
 
-    void onTimer();
+  void onTimer();
 
-    protected:
+protected:
+  void readMeasurement(Measurement &ms);
 
-    void readMeasurement(Measurement &ms);
-
-    private:
-    Measurement lastMeasurement;
-    Timer timer;
+private:
+  Measurement lastMeasurement;
+  Timer timer;
 };
 
-Sensors& getSensors();
+Sensors &getSensors();
 void startSensors();

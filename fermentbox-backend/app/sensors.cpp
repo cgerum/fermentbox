@@ -1,53 +1,47 @@
 #include <cstdlib>
 
-#include <SmingCore.h>
 #include <Libraries/DHTesp/DHTesp.h>
+#include <SmingCore.h>
 
 #include "sensors.h"
-
 
 #define DHT_WORK_PIN 16
 
 static DHTesp dht;
-static Sensors currentSensors; 
+static Sensors currentSensors;
 
-Sensors& getSensors(){
-    return currentSensors;
-}
+Sensors &getSensors() { return currentSensors; }
 
 void startSensors() {
-    dht.setup(DHT_WORK_PIN, DHTesp::DHT22);
-    currentSensors.start();
+  dht.setup(DHT_WORK_PIN, DHTesp::DHT22);
+  currentSensors.start();
 }
 
-void Sensors::readMeasurement(Measurement &ms){
-    int random = rand();
+void Sensors::readMeasurement(Measurement &ms) {
+  int random = rand();
 
-    
-	DateTime currentDate = SystemClock.now();
-    TempAndHumidity th = dht.getTempAndHumidity();
+  DateTime currentDate = SystemClock.now();
+  TempAndHumidity th = dht.getTempAndHumidity();
 
-    if (dht.getStatus() == DHTesp::ERROR_NONE){
-        ms.date = currentDate;
-        ms.temperature = th.temperature;
-        ms.humidity = th.humidity;
-    }else{
-        Serial.print("Failed to read from DHT: ");
-        Serial.print(dht.getStatus());
-        Serial.print("\n");
-    }
+  if (dht.getStatus() == DHTesp::ERROR_NONE) {
+    ms.date = currentDate;
+    ms.temperature = th.temperature;
+    ms.humidity = th.humidity;
+  } else {
+    Serial.print("Failed to read from DHT: ");
+    Serial.print(dht.getStatus());
+    Serial.print("\n");
+  }
 }
 
+static void timerCallback() { currentSensors.onTimer(); }
 
-static void timerCallback(){
-    currentSensors.onTimer();
+void Sensors::start() {
+  timer.initializeMs(dht.getMinimumSamplingPeriod(), timerCallback).start();
 }
 
-void Sensors::start(){
-    timer.initializeMs(dht.getMinimumSamplingPeriod(), timerCallback).start();
-}
-
-void Sensors::onTimer(){
-    readMeasurement(lastMeasurement);
-    debugf("New measurement temp: %f, hum: %f\n", lastMeasurement.temperature, lastMeasurement.humidity);
+void Sensors::onTimer() {
+  readMeasurement(lastMeasurement);
+  debugf("New measurement temp: %f, hum: %f\n", lastMeasurement.temperature,
+         lastMeasurement.humidity);
 }

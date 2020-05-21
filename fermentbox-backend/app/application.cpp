@@ -1,76 +1,74 @@
 #include <SmingCore.h>
 
-
-#include "webserver.h"
 #include "configuration.h"
-#include "sensors.h"
 #include "control_loop.h"
 #include "logger.h"
+#include "sensors.h"
+#include "webserver.h"
 
 NtpClient ntpClient("pool.ntp.org", 30);
 
-
-void startMDNS()
-{
-	struct mdns_info* info = (struct mdns_info*)os_zalloc(sizeof(struct mdns_info));
-	info->host_name = (char*)"fermentbox"; // You can replace test with your own host name
-	info->ipAddr = WifiStation.getIP();
-	info->server_name = (char*)"Sming";
-	info->server_port = 80;
-	info->txt_data[0] = (char*)"version = now";
-	espconn_mdns_init(info);
+void startMDNS() {
+  struct mdns_info *info =
+      (struct mdns_info *)os_zalloc(sizeof(struct mdns_info));
+  info->host_name =
+      (char *)"fermentbox"; // You can replace test with your own host name
+  info->ipAddr = WifiStation.getIP();
+  info->server_name = (char *)"Sming";
+  info->server_port = 80;
+  info->txt_data[0] = (char *)"version = now";
+  espconn_mdns_init(info);
 }
 
-static void WifiDisconnect(const String& ssid, MacAddress bssid, WifiDisconnectReason reason)
-{
-	debugf("DISCONNECT - SSID: %s, REASON: %s\n", ssid.c_str(), WifiEvents.getDisconnectReasonDesc(reason).c_str());
+static void WifiDisconnect(const String &ssid, MacAddress bssid,
+                           WifiDisconnectReason reason) {
+  debugf("DISCONNECT - SSID: %s, REASON: %s\n", ssid.c_str(),
+         WifiEvents.getDisconnectReasonDesc(reason).c_str());
 
-	if(!WifiAccessPoint.isEnabled()) {
-		debugf("Starting OWN AP");
-		WifiStation.disconnect();
-		WifiAccessPoint.enable(true);
-		WifiStation.connect();
-	}
+  if (!WifiAccessPoint.isEnabled()) {
+    debugf("Starting OWN AP");
+    WifiStation.disconnect();
+    WifiAccessPoint.enable(true);
+    WifiStation.connect();
+  }
 }
 
+static void WifiGotIP(IpAddress ip, IpAddress mask, IpAddress gateway) {
+  debugf("GOTIP - IP: %s, MASK: %s, GW: %s\n", ip.toString().c_str(),
+         mask.toString().c_str(), gateway.toString().c_str());
 
-static void WifiGotIP(IpAddress ip, IpAddress mask, IpAddress gateway)
-{
-	debugf("GOTIP - IP: %s, MASK: %s, GW: %s\n", ip.toString().c_str(), mask.toString().c_str(),
-		   gateway.toString().c_str());
-
-	if(WifiAccessPoint.isEnabled()) {
-		debugf("Shutdown OWN AP");
-		WifiAccessPoint.enable(false);
-	}
-	// Add commands to be executed after successfully connecting to AP and got IP from it
-	startMDNS();
+  if (WifiAccessPoint.isEnabled()) {
+    debugf("Shutdown OWN AP");
+    WifiAccessPoint.enable(false);
+  }
+  // Add commands to be executed after successfully connecting to AP and got IP
+  // from it
+  startMDNS();
 }
 
-void init()
-{
-	Serial.begin(SERIAL_BAUD_RATE); // 115200 by default
-	Serial.systemDebugOutput(true);
-	Serial.commandProcessing(false);
+void init() {
+  Serial.begin(SERIAL_BAUD_RATE); // 115200 by default
+  Serial.systemDebugOutput(true);
+  Serial.commandProcessing(false);
 
-	spiffs_mount(); // Mount file system, in order to work with files
+  spiffs_mount(); // Mount file system, in order to work with files
 
-	//SET higher CPU freq & disable wifi sleep
-	system_update_cpu_freq(SYS_CPU_160MHZ);
-	wifi_set_sleep_type(NONE_SLEEP_T);
+  // SET higher CPU freq & disable wifi sleep
+  system_update_cpu_freq(SYS_CPU_160MHZ);
+  wifi_set_sleep_type(NONE_SLEEP_T);
 
-	FermentboxConfig activeConfig = FermentboxConfig::load();
-	if(activeConfig.Wifi.SSID) {
-		WifiStation.enable(true);
-		WifiStation.config(activeConfig.Wifi.SSID, activeConfig.Wifi.Password);
-	}
+  FermentboxConfig activeConfig = FermentboxConfig::load();
+  if (activeConfig.Wifi.SSID) {
+    WifiStation.enable(true);
+    WifiStation.config(activeConfig.Wifi.SSID, activeConfig.Wifi.Password);
+  }
 
-	// Attach Wifi events handlers
-	WifiEvents.onStationDisconnect(WifiDisconnect);
-	WifiEvents.onStationGotIP(WifiGotIP);
+  // Attach Wifi events handlers
+  WifiEvents.onStationDisconnect(WifiDisconnect);
+  WifiEvents.onStationGotIP(WifiGotIP);
 
-	startWebServer();
-	startSensors();
-	startControlLoop();   
-	startLogger(); 
+  startWebServer();
+  startSensors();
+  startControlLoop();
+  startLogger();
 }
