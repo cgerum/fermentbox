@@ -10,7 +10,7 @@
 #define VENTILATOR_PIN  13  //D7
 #define HUMIDIFIER_PIN   2
 
-#define HYSTERESIS     0.00f
+#define HYSTERESIS     0.03f
 #define COOLDOWN       180
 
 struct ControlLoopState {
@@ -122,8 +122,8 @@ void onControlStep(){
 void startControlLoop(){
     state.timer.initializeMs(1000, onControlStep).start();
 
-    state.active = false;
-    state.target_temperature = -3.0f;
+    state.active = true;
+    state.target_temperature = 30.0f;
     state.target_humidity = 50.0f;
 
     //Initialize IO
@@ -137,3 +137,16 @@ void startControlLoop(){
     digitalWrite(VENTILATOR_PIN, 1);
     digitalWrite(HUMIDIFIER_PIN, 1);
 }   
+
+
+
+ControlStatePublic getControlState(){
+
+    ControlStatePublic res;
+    res.target_temperature = state.target_temperature;
+    res.temperature_active = state.active;
+    res.target_humidity = state.target_humidity;
+    res.humidity_active = state.active;
+
+    return res;
+}

@@ -5,7 +5,7 @@
 #include "configuration.h"
 #include "sensors.h"
 #include "control_loop.h"
-
+#include "logger.h"
 
 NtpClient ntpClient("pool.ntp.org", 30);
 
@@ -71,5 +71,6 @@ void init()
 
 	startWebServer();
 	startSensors();
-	startControlLoop();    
+	startControlLoop();   
+	startLogger(); 
 }
