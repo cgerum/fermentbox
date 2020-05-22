@@ -8,6 +8,7 @@ public:
     DateTime date;
     float temperature;
     float humidity;
+    bool error;
   };
 
   void start();

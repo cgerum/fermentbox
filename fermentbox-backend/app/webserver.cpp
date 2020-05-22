@@ -3,8 +3,11 @@
 #include <JsonObjectStream.h>
 
 #include "configuration.h"
+#include "schedule.h"
 #include "sensors.h"
 #include "webserver.h"
+
+static const String RES_OK = String("{\"res}\": \"ok\"}");
 
 static bool serverStarted = false;
 static HttpServer server;
@@ -56,6 +59,7 @@ void onNetworkConfig(HttpRequest &request, HttpResponse &response) {
   }
 
   activeConfig.save();
+  response.sendString(RES_OK);
 }
 
 void onGetConfig(HttpRequest &request, HttpResponse &response) {
@@ -71,14 +75,15 @@ void onGetConfig(HttpRequest &request, HttpResponse &response) {
 
   response.sendDataStream(stream, MIME_JSON);
 }
+
 void onFile(HttpRequest &request, HttpResponse &response) {
   String file = request.uri.getRelativePath();
 
   if (file[0] == '.')
     response.code = HTTP_STATUS_FORBIDDEN;
   else {
-    response.setCache(
-        86400, true); // It's important to use cache for better performance.
+    // It's important to use cache for better performance.
+    response.setCache(86400, true);
     sendFile(file, response);
   }
 }
@@ -97,6 +102,83 @@ void onGetMeasurement(HttpRequest &request, HttpResponse &response) {
   response.sendDataStream(stream, MIME_JSON);
 }
 
+void onScheduleLoad(HttpRequest &request, HttpResponse &response) {
+  String name = request.getQueryParameter("name");
+  String filename = getScheduleFileName(name);
+
+  sendFile(filename, response);
+}
+
+void onScheduleSave(HttpRequest &request, HttpResponse &response) {
+  String name = request.getQueryParameter("name");
+  String filename = getScheduleFileName(name);
+  FileStream stream(filename, eFO_WriteOnly | eFO_CreateNewAlways);
+
+  String body = request.getBody();
+
+  debugf("Result: %s", body.c_str());
+
+  auto pos = body.begin();
+  while (pos != body.end()) {
+    int count = stream.write((uint8_t *)pos, body.end() - pos);
+    if (count < 0) {
+      return;
+    }
+
+    pos += count;
+  }
+
+  stream.close();
+
+  response.sendString(RES_OK);
+}
+
+void onScheduleDelete(HttpRequest &request, HttpResponse &response) {
+  String name = request.getQueryParameter("name");
+  String filename = getScheduleFileName(name);
+
+  fileDelete(filename);
+  response.sendString(RES_OK);
+}
+
+void onScheduleStart(HttpRequest &request, HttpResponse &response) {
+  String name = request.getQueryParameter("name");
+  String filename = getScheduleFileName(name);
+  startSchedule(name);
+
+  response.sendString(RES_OK);
+}
+
+void onScheduleStop(HttpRequest &request, HttpResponse &response) {
+  stopSchedule();
+
+  response.sendString(RES_OK);
+}
+
+void onScheduleList(HttpRequest &request, HttpResponse &response) {
+  String result;
+  result += String("[");
+  auto files = fileList();
+  int count = 0;
+  for (int i = 0; i < files.size(); i++) {
+    auto filename = files[i];
+    if (filename.startsWith(".schedule-")) {
+      if (count > 0) {
+        result += String(",");
+      }
+      result += String("\"");
+      filename.trim();
+      result += filename.substring(10, filename.length() - 5);
+      result += String("\"");
+
+      count += 1;
+    }
+  }
+  result += "]";
+  response.setContentType(MIME_JSON);
+  response.sendString(result);
+}
+
 void startWebServer() {
   if (serverStarted)
     return;
@@ -106,6 +188,12 @@ void startWebServer() {
   server.paths.set("/networkConfig", onNetworkConfig);
   server.paths.set("/getConfig", onGetConfig);
   server.paths.set("/getMeasurement", onGetMeasurement);
+  server.paths.set("/schedule/load", onScheduleLoad);
+  server.paths.set("/schedule/save", onScheduleSave);
+  server.paths.set("/schedule/delete", onScheduleDelete);
+  server.paths.set("/schedule/list", onScheduleList);
+  server.paths.set("/schedule/start", onScheduleStart);
+  server.paths.set("/schedule/stop", onScheduleStop);
   server.paths.setDefault(onFile);
   server.setBodyParser(MIME_JSON, bodyToStringParser);
   serverStarted = true;

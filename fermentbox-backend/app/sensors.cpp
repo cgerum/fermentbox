@@ -27,10 +27,12 @@ void Sensors::readMeasurement(Measurement &ms) {
     ms.date = currentDate;
     ms.temperature = th.temperature;
     ms.humidity = th.humidity;
+    ms.error = false;
   } else {
     Serial.print("Failed to read from DHT: ");
     Serial.print(dht.getStatus());
     Serial.print("\n");
+    ms.error = true;
   }
 }
 
@@ -42,6 +44,6 @@ void Sensors::start() {
 
 void Sensors::onTimer() {
   readMeasurement(lastMeasurement);
-  debugf("New measurement temp: %f, hum: %f\n", lastMeasurement.temperature,
-         lastMeasurement.humidity);
+  // debugf("New measurement temp: %f, hum: %f\n", lastMeasurement.temperature,
+  //       lastMeasurement.humidity);
 }

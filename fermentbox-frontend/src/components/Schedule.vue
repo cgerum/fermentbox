@@ -5,18 +5,18 @@
         <v-list-item-content>
           <v-card outlined>
             <v-card-actions>
-              <v-select v-model="currentSchedule" :items="schedules">
-              </v-select>
+              <v-select v-model="currentSchedule" :items="schedules" @change="changeSchedule"></v-select>
               <v-btn icon @click="addSchedule">
                 <v-icon>mdi-plus-circle-outline</v-icon>
               </v-btn>
-              <v-btn icon @click="copySchedule">
+              <!--               <v-btn icon @click="copySchedule">
                 <v-icon>mdi-content-copy</v-icon>
               </v-btn>
+              -->
               <v-btn icon @click="deleteSchedule">
                 <v-icon>mdi-delete-outline</v-icon>
               </v-btn>
-              <v-btn icon large>
+              <v-btn icon large @click="runSchedule">
                 <v-icon>mdi-play</v-icon>
               </v-btn>
             </v-card-actions>
@@ -158,13 +158,14 @@
 </style>
 
 <script>
+import sendRequest from "../requests.js";
 export default {
   name: "Schedule",
 
   data: () => ({
     tasks: [], // TODO offer option to reorder tasks
-    schedules: ["Schedule 1", "Schedule 2", "Schedule 3"],
-    currentSchedule: "Schedule 1",
+    schedules: [""],
+    currentSchedule: "",
     showAddTaskDialog: false,
     addTaskDialog: {
       temperature: 0,
@@ -188,52 +189,113 @@ export default {
   },
 
   methods: {
+    changeSchedule() {
+      this.loadTasks();
+    },
     loadSchedules() {
-      // TODO load schedules
+      sendRequest("schedule/list").then(data => {
+        this.schedules = data;
+        data = data.sort();
+        if (data.length > 0) {
+          this.currentSchedule = data[0];
+        }
+      });
     },
     addSchedule() {
-      // TODO add schedule
-      alert("add schedule");
+      let new_name = "New Schedule";
+      let count = 1;
+      while (this.schedules.includes(new_name)) {
+        new_name = "New Schedule (" + count + ")";
+        count += 1;
+      }
+
+      sendRequest("schedule/save", { name: new_name }, "[]").then(data => {
+        this.loadSchedules();
+        this.currentSchedule = new_name;
+        console.log(data); // FIXME:
+      });
     },
     copySchedule() {
       // TODO copy schedule
       alert("copy schedule");
     },
     deleteSchedule() {
-      // TODO delete schedule
-      alert("delete schedule");
+      const schedule_name = this.currentSchedule;
+      if (schedule_name) {
+        sendRequest("schedule/delete", { name: schedule_name }).then(data => {
+          this.loadSchedules();
+          console.log(data); //FIXME: remove
+        });
+      }
     },
-    loadTasks: function() {
-      // TODO load tasks
-      this.tasks = [
-        {
-          id: "temp123",
-          temperature: 30,
-          humidity: 90,
-          duration: 1,
-          controlTemperature: true,
-          controlHumidity: true,
-          active: true
-        },
-        {
-          id: "humi123",
-          temperature: 60,
-          humidity: 20,
-          duration: 4,
-          controlTemperature: true,
-          controlHumidity: false,
-          active: false
-        },
-        {
-          id: "humi456",
-          temperature: 60,
-          humidity: 20,
-          duration: 4,
-          controlTemperature: false,
-          controlHumidity: true,
-          active: false
+
+    runSchedule() {
+      const schedule_name = this.currentSchedule;
+      if (schedule_name) {
+        sendRequest("schedule/start", { name: schedule_name });
+      }
+    },
+
+    loadTasks() {
+      if (this.currentSchedule === "") {
+        this.tasks = [];
+        return;
+      }
+
+      sendRequest("schedule/load", { name: this.currentSchedule }).then(
+        data => {
+          this.tasks = [];
+          let count = 0;
+          data.forEach(element => {
+            let temperature = 0;
+            let temperatureStart = 0;
+            let temperatureEnd = 0;
+            let controlTemperature = false;
+
+            if (element.temperature_active) {
+              controlTemperature = true;
+              temperature = element.temperature_start;
+              temperatureStart = element.remperature_start;
+              if (element.temperature_end) {
+                temperatureEnd = element.temperature_end;
+              } else {
+                temperatureEnd = temperatureStart;
+              }
+            }
+
+            let humidity = 0;
+            let humidityStart = 0;
+            let humidityEnd = 0;
+            let controlHumidity = false;
+
+            if (element.humidity_active) {
+              controlHumidity = true;
+              humidity = element.humidity_start;
+              humidityStart = element.humidity_start;
+              if (element.humidity_end) {
+                humidityEnd = element.humidity_end;
+              } else {
+                humidityEnd = humidityStart;
+              }
+            }
+
+            this.tasks.push({
+              id: this.currentSchedule + "_task" + count,
+              duration: element.duration,
+              controlTemperature: controlTemperature,
+              controlHumidity: controlHumidity,
+              active: false,
+              temperature: temperature,
+              humidity: humidity,
+              temperatureStart: temperatureStart,
+              temperatureEnd: temperatureEnd,
+              humidityStart: humidityStart,
+              humidityEnd: humidityEnd
+            });
+            count += 1;
+          });
         }
-      ];
+      );
     },
     storeTasks: function() {
       // TOO store tasks

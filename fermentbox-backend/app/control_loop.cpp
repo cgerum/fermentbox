@@ -35,7 +35,7 @@ void onControlStep() {
   Sensors &sensors = getSensors();
   Sensors::Measurement &measurement = sensors.getLastMeasurement();
 
-  if (!state.temperature_active) {
+  if (!state.temperature_active || measurement.error) {
     digitalWrite(HEATER_PIN, 1);
     digitalWrite(COOLER_PIN, 1);
   } else {
@@ -68,7 +68,7 @@ void onControlStep() {
     }
   }
 
-  if (!state.humidity_active) {
+  if (!state.humidity_active || measurement.error) {
     digitalWrite(VENTILATOR_PIN, 1);
     digitalWrite(HUMIDIFIER_PIN, 1);
   } else {
@@ -129,9 +129,9 @@ void onControlStep() {
 void startControlLoop() {
   state.timer.initializeMs(1000, onControlStep).start();
 
-  state.temperature_active = true;
-  state.humidity_active = true;
-  state.target_temperature = 30.0f;
+  state.temperature_active = false;
+  state.humidity_active = false;
+  state.target_temperature = -5.0f;
   state.target_humidity = 50.0f;
 
   // Initialize IO

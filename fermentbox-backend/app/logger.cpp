@@ -58,7 +58,7 @@ public:
     local_pos += 1;
     if (local_pos >= LOG_BUFFER_SIZE) {
 
-      debugf("Writing result size: %d\n", stream.getSize());
+      // debugf("Writing result size: %d\n", stream.getSize());
 
       stream.write((uint8_t *)&(local_buffer[0]), sizeof(local_buffer));
 
@@ -80,12 +80,13 @@ public:
 
   void run() {
     stream.open(LOG_FILE, eFO_ReadWrite | eFO_CreateIfNotExist);
+    stream.seek(stream.getSize());
     if (!stream.isValid()) {
       debugf("Could not initialize logging\n");
       return;
     }
 
-    debugf("Logfile: %s sized: %d \n", LOG_FILE, stream.getSize());
+    // debugf("Logfile: %s sized: %d \n", LOG_FILE, stream.getSize());
 
     timer
         .initializeMs(1000 * LOG_INTERVALL,
