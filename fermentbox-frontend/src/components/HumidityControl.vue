@@ -2,19 +2,21 @@
   <v-card outlined>
     <v-card-title>
       <v-icon x-large color="secondary">mdi-water</v-icon>
-      <span class="card-title">Humidity <span>{{currentValue}}</span> %</span>
+      <span class="card-title">
+        Humidity
+        <span>{{currentValue}}</span> %
+      </span>
     </v-card-title>
     <v-card-text>
-        <v-sparkline
+      <v-sparkline
         :gradient="['#0a4c8a', '#97d5e0']"
-        :line-width="3"
+        :line-width="1"
         :smooth="16"
         :value="log"
-        :labels="labels"
         auto-draw
         stroke-linecap="round"
         class="control"
-        ></v-sparkline>
+      ></v-sparkline>
     </v-card-text>
   </v-card>
 </template>
@@ -27,35 +29,40 @@
 </style>
 
 <script>
-import EventBus from '../event-bus.js'
+import EventBus from "../event-bus.js";
 
 export default {
   name: "HumidityControl",
 
   data: () => ({
-    log: []
+    log: [],
+    start: 0
   }),
   computed: {
     labels: function() {
       return this.log.map(data => data.label);
     },
     currentValue: function() {
-      return this.log.length > 0 ? this.log[this.log.length -1].value : "--"
+      return this.log.length > 0 ? this.log[this.log.length - 1].value : "--";
     }
   },
-    
+
   created: function() {
-    EventBus.$on('new-measurement', data => {
-      this.updateLog(data)
-    })
+    this.start = Math.round(Date.now() / 1000);
+    EventBus.$on("new-measurement", data => {
+      this.updateLog(data);
+    });
   },
 
   methods: {
     updateLog: function(data) {
-      if (this.log.length === 20) {
-        this.log.shift()
+      if (this.log.length >= 180) {
+        this.log.shift();
       }
-      this.log.push({label: data.date, value: data.humidity}) 
+      this.log.push({
+        label: data.date - this.start,
+        value: data.humidity
+      });
     }
   }
 };

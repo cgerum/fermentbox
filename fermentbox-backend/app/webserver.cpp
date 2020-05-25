@@ -7,7 +7,7 @@
 #include "sensors.h"
 #include "webserver.h"
 
-static const String RES_OK = String("{\"res}\": \"ok\"}");
+static const String RES_OK = String("{\"res\": \"ok\"}");
 
 static bool serverStarted = false;
 static HttpServer server;
@@ -59,6 +59,8 @@ void onNetworkConfig(HttpRequest &request, HttpResponse &response) {
   }
 
   activeConfig.save();
+
+  response.setContentType(MIME_JSON);
   response.sendString(RES_OK);
 }
 
@@ -95,7 +97,7 @@ void onGetMeasurement(HttpRequest &request, HttpResponse &response) {
   Sensors &sensors = getSensors();
   Sensors::Measurement &measurement = sensors.getLastMeasurement();
 
-  json["date"] = measurement.date.toISO8601();
+  json["date"] = measurement.date.toUnixTime();
   json["temperature"] = measurement.temperature;
   json["humidity"] = measurement.humidity;
 
@@ -110,6 +112,18 @@ void onScheduleLoad(HttpRequest &request, HttpResponse &response) {
 }
 
 void onScheduleSave(HttpRequest &request, HttpResponse &response) {
+  if (request.method != HTTP_POST) {
+    response.code = HTTP_STATUS_BAD_REQUEST;
+    return;
+  }
+
+  debugf("Save schedule");
+  // Update config
+  if (request.getBody() == nullptr) {
+    debugf("NULL bodyBuf");
+    return;
+  }
+
   String name = request.getQueryParameter("name");
   String filename = getScheduleFileName(name);
   FileStream stream(filename, eFO_WriteOnly | eFO_CreateNewAlways);
@@ -130,6 +144,7 @@ void onScheduleSave(HttpRequest &request, HttpResponse &response) {
 
   stream.close();
 
+  response.setContentType(MIME_JSON);
   response.sendString(RES_OK);
 }
 
@@ -138,6 +153,7 @@ void onScheduleDelete(HttpRequest &request, HttpResponse &response) {
   String filename = getScheduleFileName(name);
 
   fileDelete(filename);
+  response.setContentType(MIME_JSON);
   response.sendString(RES_OK);
 }
 
@@ -146,12 +162,14 @@ void onScheduleStart(HttpRequest &request, HttpResponse &response) {
   String filename = getScheduleFileName(name);
   startSchedule(name);
 
+  response.setContentType(MIME_JSON);
   response.sendString(RES_OK);
 }
 
 void onScheduleStop(HttpRequest &request, HttpResponse &response) {
   stopSchedule();
 
+  response.setContentType(MIME_JSON);
   response.sendString(RES_OK);
 }
 
@@ -188,12 +206,14 @@ void startWebServer() {
   server.paths.set("/networkConfig", onNetworkConfig);
   server.paths.set("/getConfig", onGetConfig);
   server.paths.set("/getMeasurement", onGetMeasurement);
+
   server.paths.set("/schedule/load", onScheduleLoad);
   server.paths.set("/schedule/save", onScheduleSave);
   server.paths.set("/schedule/delete", onScheduleDelete);
   server.paths.set("/schedule/list", onScheduleList);
   server.paths.set("/schedule/start", onScheduleStart);
   server.paths.set("/schedule/stop", onScheduleStop);
+  
   server.paths.setDefault(onFile);
   server.setBodyParser(MIME_JSON, bodyToStringParser);
   serverStarted = true;

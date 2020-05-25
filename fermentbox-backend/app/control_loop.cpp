@@ -10,8 +10,9 @@
 #define VENTILATOR_PIN 13 // D7
 #define HUMIDIFIER_PIN 2
 
-#define HYSTERESIS 0.03f
-#define COOLDOWN 180
+#define HYSTERESIS_ON 0.018f
+#define HYSTERESIS_OFF 0.017f
+#define COOLDOWN 10
 
 struct ControlLoopState {
   bool temperature_active;
@@ -39,20 +40,22 @@ void onControlStep() {
     digitalWrite(HEATER_PIN, 1);
     digitalWrite(COOLER_PIN, 1);
   } else {
-    if (measurement.temperature > state.target_temperature) {
+    if (measurement.temperature >
+        state.target_temperature * (1.0f - HYSTERESIS_OFF)) {
       if (digitalRead(HEATER_PIN) == 0) {
         digitalWrite(HEATER_PIN, 1);
         state.cooler_cooldown = COOLDOWN;
       }
     }
-    if (measurement.temperature < state.target_temperature) {
+    if (measurement.temperature <
+        state.target_temperature * (1.0 + HYSTERESIS_OFF)) {
       if (digitalRead(COOLER_PIN) == 0) {
         digitalWrite(COOLER_PIN, 1);
         state.heater_cooldown = COOLDOWN;
       }
     }
     if ((measurement.temperature >
-         state.target_temperature * (1.0f + HYSTERESIS)) &&
+         state.target_temperature * (1.0f + HYSTERESIS_ON)) &&
         state.cooler_cooldown <= 0) {
       if (digitalRead(COOLER_PIN) == 1) {
         digitalWrite(COOLER_PIN, 0);
@@ -60,7 +63,7 @@ void onControlStep() {
     }
 
     if ((measurement.temperature <
-         state.target_temperature * (1.0f - HYSTERESIS)) &&
+         state.target_temperature * (1.0f - HYSTERESIS_ON)) &&
         state.heater_cooldown <= 0) {
       if (digitalRead(HEATER_PIN) == 1) {
         digitalWrite(HEATER_PIN, 0);
@@ -73,25 +76,27 @@ void onControlStep() {
     digitalWrite(HUMIDIFIER_PIN, 1);
   } else {
 
-    if (measurement.humidity < state.target_humidity) {
+    if (measurement.humidity < state.target_humidity * (1.0 - HYSTERESIS_OFF)) {
       if (digitalRead(VENTILATOR_PIN) == 0) {
         digitalWrite(VENTILATOR_PIN, 1);
         state.humidifier_cooldown = COOLDOWN;
       }
     }
-    if (measurement.humidity > state.target_humidity) {
+    if (measurement.humidity > state.target_humidity * (1.0 + HYSTERESIS_OFF)) {
       if (digitalRead(HUMIDIFIER_PIN) == 0) {
         digitalWrite(HUMIDIFIER_PIN, 1);
         state.ventilator_cooldown = COOLDOWN;
       }
     }
-    if ((measurement.humidity > state.target_humidity * (1.0f + HYSTERESIS)) &&
+    if ((measurement.humidity >
+         state.target_humidity * (1.0f + HYSTERESIS_ON)) &&
         state.ventilator_cooldown <= 0) {
       if (digitalRead(VENTILATOR_PIN) == 1) {
         digitalWrite(VENTILATOR_PIN, 0);
       }
     }
-    if ((measurement.humidity < state.target_humidity * (1.0f - HYSTERESIS)) &&
+    if ((measurement.humidity <
+         state.target_humidity * (1.0f - HYSTERESIS_ON)) &&
         state.humidifier_cooldown <= 0) {
       if (digitalRead(HUMIDIFIER_PIN) == 1) {
         digitalWrite(HUMIDIFIER_PIN, 0);
@@ -131,7 +136,7 @@ void startControlLoop() {
 
   state.temperature_active = false;
   state.humidity_active = false;
-  state.target_temperature = -5.0f;
+  state.target_temperature = 30.0f;
   state.target_humidity = 50.0f;
 
   // Initialize IO

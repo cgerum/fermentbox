@@ -11,7 +11,11 @@ function sendRequest(url, params = {}, body = "") {
     xhr.onreadystatechange = () => {
       if (xhr.readyState === 4) {
         if (xhr.status === 200) {
-          resolve(JSON.parse(xhr.responseText));
+          if (xhr.responseText !== "") {
+            resolve(JSON.parse(xhr.responseText));
+          } else {
+            resolve(null);
+          }
         } else {
           reject(xhr.statusText);
         }
@@ -28,6 +32,10 @@ function sendRequest(url, params = {}, body = "") {
     }
 
     xhr.open(type, url, true);
+
+    if (body !== "") {
+      xhr.setRequestHeader("Content-Type", "application/json");
+    }
     xhr.send(body);
   });
 }

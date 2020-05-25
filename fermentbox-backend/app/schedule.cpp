@@ -3,7 +3,7 @@
 #include "schedule.h"
 
 // Maximum schedule size is 30 KB
-#define ScheduleJsonBufferSize (1024 * 20)
+#define ScheduleJsonBufferSize (1024 * 1)
 
 static StaticJsonDocument<ScheduleJsonBufferSize> scheduleDoc;
 

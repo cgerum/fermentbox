@@ -8,7 +8,7 @@
 
 #define LOG_FILE_SIZE (1024 * 8 * 16)
 #define LOG_BUFFER_SIZE 8
-#define LOG_INTERVALL 1
+#define LOG_INTERVALL 30
 #define LOG_FILE "fermentbox.log"
 #define LOG_FILE_OLD "fermentbox.log.old"
 #define LOG_SCALE_FACTOR 256.0f // 8 Bit for Fractional part
