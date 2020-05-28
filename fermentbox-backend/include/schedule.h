@@ -3,7 +3,7 @@
 #include <SmingCore.h>
 
 inline String getScheduleFileName(String &name) {
-  String filename = String(".schedule-") + name + ".json";
+  String filename = String(".sch-") + name + ".json";
   return filename;
 }
 

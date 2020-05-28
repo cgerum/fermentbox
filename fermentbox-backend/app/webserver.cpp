@@ -126,6 +126,10 @@ void onScheduleSave(HttpRequest &request, HttpResponse &response) {
 
   String name = request.getQueryParameter("name");
   String filename = getScheduleFileName(name);
+  if (filename.length() > 31) {
+    debugf("Filename to long");
+    return;
+  }
   FileStream stream(filename, eFO_WriteOnly | eFO_CreateNewAlways);
 
   String body = request.getBody();
@@ -180,13 +184,13 @@ void onScheduleList(HttpRequest &request, HttpResponse &response) {
   int count = 0;
   for (int i = 0; i < files.size(); i++) {
     auto filename = files[i];
-    if (filename.startsWith(".schedule-")) {
+    if (filename.startsWith(".sch-")) {
       if (count > 0) {
         result += String(",");
       }
       result += String("\"");
       filename.trim();
-      result += filename.substring(10, filename.length() - 5);
+      result += filename.substring(5, filename.length() - 5);
       result += String("\"");
 
       count += 1;
@@ -213,7 +217,7 @@ void startWebServer() {
   server.paths.set("/schedule/list", onScheduleList);
   server.paths.set("/schedule/start", onScheduleStart);
   server.paths.set("/schedule/stop", onScheduleStop);
-  
+
   server.paths.setDefault(onFile);
   server.setBodyParser(MIME_JSON, bodyToStringParser);
   serverStarted = true;
