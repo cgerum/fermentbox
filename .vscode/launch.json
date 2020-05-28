@@ -1,0 +1,33 @@
+{
+  // Use IntelliSense to learn about possible attributes.
+  // Hover to view descriptions of existing attributes.
+  // For more information, visit: https://go.microsoft.com/fwlink/?linkid=830387
+  "version": "0.2.0",
+  "configurations": [
+    {
+      "type": "chrome",
+      "request": "launch",
+      "name": "frontend: chrome",
+      "url": "http://localhost:8080",
+      "webRoot": "${workspaceFolder}/fermentbo"
+    },
+    {
+      "name": "frontend: firefox",
+      "type": "firefox",
+      "request": "launch",
+      "reAttach": true,
+      "url": "http://localhost:8080",
+      "webRoot": "${workspaceFolder}/fermentbox-frontend",
+      "pathMappings": [
+        {
+          "url": "webpack:///src/components/Schedule.vue",
+          "path": "${workspaceFolder}/fermentbox-frontend/src/components/Schedule.vue"
+        },
+        {
+          "url": "webpack:///src/**",
+          "path": "${webRoot}/**"
+        }
+      ]
+    }
+  ]
+}

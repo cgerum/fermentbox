@@ -5,7 +5,11 @@
         <v-list-item-content>
           <v-card outlined>
             <v-card-actions>
-              <v-select v-model="currentSchedule" :items="schedules" @change="changeSchedule"></v-select>
+              <v-select
+                v-model="currentSchedule"
+                :items="schedules"
+                @change="changeSchedule"
+              ></v-select>
               <v-btn icon @click="addSchedule">
                 <v-icon>mdi-plus-circle-outline</v-icon>
               </v-btn>
@@ -27,23 +31,39 @@
         <v-list-item-content>
           <v-card outlined>
             <v-card-title class="card-title">
-              <v-icon color="secondary" style="margin-right: 5px">mdi-timer-outline</v-icon>
-              {{currentSchedule}}
+              <v-icon color="secondary" style="margin-right: 5px"
+                >mdi-timer-outline</v-icon
+              >
+              {{ currentSchedule }}
             </v-card-title>
+
             <v-card-text>
-              <v-list>
-                <v-list-item v-for="(task, i) in tasks" :key="i">
+              <draggable
+                :list="tasks"
+                class="list-group"
+                ghost-class="ghost"
+                :disabled="false"
+              >
+                <v-list-item v-for="task in tasks" :key="task.id">
                   <v-list-item-icon>
                     <v-icon
                       v-if="task.controlTemperature && task.controlHumidity"
-                    >mdi-oil-temperature</v-icon>
-                    <v-icon v-else-if="task.controlTemperature">mdi-thermometer</v-icon>
+                      >mdi-oil-temperature</v-icon
+                    >
+                    <v-icon v-else-if="task.controlTemperature"
+                      >mdi-thermometer</v-icon
+                    >
                     <v-icon v-else-if="task.controlHumidity">mdi-water</v-icon>
                   </v-list-item-icon>
                   <v-list-item-content>
-                    <v-list-item-title>{{getTitle(task)}}</v-list-item-title>
-                    <v-list-item-subtitle>{{getSubTitle(task)}}</v-list-item-subtitle>
-                    <v-progress-linear value="15" v-if="task.active"></v-progress-linear>
+                    <v-list-item-title>{{ getTitle(task) }}</v-list-item-title>
+                    <v-list-item-subtitle>{{
+                      getSubTitle(task)
+                    }}</v-list-item-subtitle>
+                    <v-progress-linear
+                      value="15"
+                      v-if="task.active"
+                    ></v-progress-linear>
                   </v-list-item-content>
                   <v-list-item-action>
                     <v-icon @click="openAddTaskDialog(task)">mdi-pencil</v-icon>
@@ -52,10 +72,18 @@
                     <v-icon @click="removeTask(task)">mdi-delete</v-icon>
                   </v-list-item-action>
                 </v-list-item>
-              </v-list>
+              </draggable>
             </v-card-text>
           </v-card>
-          <v-btn absolute dark fab bottom right color="accent" @click="openAddTaskDialog()">
+          <v-btn
+            absolute
+            dark
+            fab
+            bottom
+            right
+            color="accent"
+            @click="openAddTaskDialog()"
+          >
             <v-icon>mdi-plus</v-icon>
           </v-btn>
         </v-list-item-content>
@@ -115,7 +143,11 @@
               ></v-text-field>
             </template>
           </v-slider>
-          <v-switch v-model="addTaskDialog.controlHumidity" class="ma-2" label="Control Humidity"></v-switch>
+          <v-switch
+            v-model="addTaskDialog.controlHumidity"
+            class="ma-2"
+            label="Control Humidity"
+          ></v-switch>
           <v-slider
             v-model="addTaskDialog.humidity"
             class="align-center control"
@@ -140,9 +172,19 @@
         </v-card-text>
         <v-card-actions>
           <v-spacer></v-spacer>
-          <v-btn color="accent" outlined @click="showAddTaskDialog = false">Close</v-btn>
-          <v-btn color="accent" depressed @click="addTask" v-if="addTaskDialog.edit">Add Task</v-btn>
-          <v-btn color="accent" depressed @click="editTask" v-else>Update Task</v-btn>
+          <v-btn color="accent" outlined @click="showAddTaskDialog = false"
+            >Close</v-btn
+          >
+          <v-btn
+            color="accent"
+            depressed
+            @click="addTask"
+            v-if="addTaskDialog.add"
+            >Add Task</v-btn
+          >
+          <v-btn color="accent" depressed @click="editTask" v-else
+            >Update Task</v-btn
+          >
         </v-card-actions>
       </v-card>
     </v-dialog>
@@ -158,10 +200,13 @@
 </style>
 
 <script>
+import draggable from "vuedraggable";
 import sendRequest from "../requests.js";
 export default {
   name: "Schedule",
-
+  components: {
+    draggable,
+  },
   data: () => ({
     tasks: [], // TODO offer option to reorder tasks
     schedules: [""],
@@ -173,32 +218,36 @@ export default {
       duration: 1,
       controlTemperature: true,
       controlHumidity: true,
-      edit: false
-    }
+      edit: false,
+    },
   }),
 
   computed: {
     dialogType: function() {
       return this.addTaskDialog.label.toLowerCase();
-    }
+    },
   },
 
   created: function() {
     this.loadSchedules();
-    this.loadTasks();
   },
 
   methods: {
     changeSchedule() {
       this.loadTasks();
     },
-    loadSchedules() {
-      sendRequest("schedule/list").then(data => {
+    loadSchedules(activeSchedule = "") {
+      sendRequest("schedule/list").then((data) => {
         this.schedules = data;
         data = data.sort();
-        if (data.length > 0) {
-          this.currentSchedule = data[0];
+        if (activeSchedule !== "" && data.includes(activeSchedule)) {
+          this.currentSchedule = activeSchedule;
+        } else {
+          if (data.length > 0) {
+            this.currentSchedule = data[0];
+          }
         }
+        this.loadTasks();
       });
     },
     addSchedule() {
@@ -209,10 +258,8 @@ export default {
         count += 1;
       }
 
-      sendRequest("schedule/save", { name: new_name }, "[]").then(data => {
-        this.loadSchedules();
-        this.currentSchedule = new_name;
-        console.log(data); // FIXME:
+      sendRequest("schedule/save", { name: new_name }, "[]").then(() => {
+        this.loadSchedules(new_name);
       });
     },
     copySchedule() {
@@ -222,9 +269,8 @@ export default {
     deleteSchedule() {
       const schedule_name = this.currentSchedule;
       if (schedule_name) {
-        sendRequest("schedule/delete", { name: schedule_name }).then(data => {
+        sendRequest("schedule/delete", { name: schedule_name }).then(() => {
           this.loadSchedules();
-          console.log(data); //FIXME: remove
         });
       }
     },
@@ -242,11 +288,14 @@ export default {
         return;
       }
 
+      console.log("Loading tasks");
+      console.log(this.currentSchedule);
+
       sendRequest("schedule/load", { name: this.currentSchedule }).then(
-        data => {
+        (data) => {
           this.tasks = [];
           let count = 0;
-          data.forEach(element => {
+          data.forEach((element) => {
             let temperature = 0;
             let temperatureStart = 0;
             let temperatureEnd = 0;
@@ -290,7 +339,7 @@ export default {
               temperatureStart: temperatureStart,
               temperatureEnd: temperatureEnd,
               humidityStart: humidityStart,
-              humidityEnd: humidityEnd
+              humidityEnd: humidityEnd,
             });
             count += 1;
           });
@@ -317,12 +366,17 @@ export default {
       return `Duration: ${task.duration} hours`;
     },
     openAddTaskDialog: function(task) {
-      this.addTaskDialog.task = task;
-      this.addTaskDialog.controlTemperature = task.controlTemperature;
-      this.addTaskDialog.controlHumidity = task.controlHumidity;
-      this.addTaskDialog.temperature = task.temperature;
-      this.addTaskDialog.humidity = task.humidity;
-      this.addTaskDialog.duration = task.duration;
+      if (task) {
+        this.addTaskDialog.task = task;
+        this.addTaskDialog.controlTemperature = task.controlTemperature;
+        this.addTaskDialog.controlHumidity = task.controlHumidity;
+        this.addTaskDialog.temperature = task.temperature;
+        this.addTaskDialog.humidity = task.humidity;
+        this.addTaskDialog.duration = task.duration;
+      } else {
+        this.addTaskDialog.label = "";
+        this.addTaskDialog.add = true;
+      }
 
       this.showAddTaskDialog = true;
     },
@@ -334,7 +388,7 @@ export default {
         controlHumidity: this.addTaskDialog.controlHumidity,
         temperature: this.addTaskDialog.temperature,
         humidity: this.addTaskDialog.humidity,
-        duration: this.addTaskDialog.duration
+        duration: this.addTaskDialog.duration,
       });
       this.showAddTaskDialog = false;
     },
@@ -349,11 +403,11 @@ export default {
       this.showAddTaskDialog = false;
     },
     removeTask: function(task) {
-      this.tasks = this.tasks.filter(t => t.id !== task.id);
+      this.tasks = this.tasks.filter((t) => t.id !== task.id);
     },
     generateId() {
       return `${Date.now()}`;
-    }
-  }
+    },
+  },
 };
 </script>
