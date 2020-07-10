@@ -8,6 +8,7 @@ function encodeQueryData(data) {
 function sendRequest(url, params = {}, body = "") {
   return new Promise((resolve, reject) => {
     const xhr = new XMLHttpRequest();
+    xhr.timeout = 1000
     xhr.onreadystatechange = () => {
       if (xhr.readyState === 4) {
         if (xhr.status === 200) {

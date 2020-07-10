@@ -4,6 +4,7 @@
 #include <SmingCore.h>
 
 #include "sensors.h"
+#include "status.h"
 
 #define DHT_WORK_PIN 16
 
@@ -28,10 +29,12 @@ void Sensors::readMeasurement(Measurement &ms) {
     ms.temperature = th.temperature;
     ms.humidity = th.humidity;
     ms.error = false;
+    set_status(STATUS_NORMAL);
   } else {
     Serial.print("Failed to read from DHT: ");
     Serial.print(dht.getStatus());
     Serial.print("\n");
+    set_status(STATUS_SENSOR_FAILED);
     ms.error = true;
   }
 }

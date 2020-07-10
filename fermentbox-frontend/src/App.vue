@@ -10,12 +10,11 @@
       </div>
 
       <v-spacer></v-spacer>
-
-      <v-icon v-if="connected">mdi-wifi</v-icon>
-      <v-icon v-else>mdi-wifi-off</v-icon>
     </v-app-bar>
 
     <v-content>
+      <v-alert v-if="!status.ok" type="error">{{status.message}}</v-alert>
+
       <v-navigation-drawer v-model="drawer" absolute temporary>
         <v-list>
           <v-list-item link @click="setPage('controls')">
@@ -99,8 +98,8 @@ import TemperatureControl from "./components/TemperatureControl";
 import HumidityControl from "./components/HumidityControl";
 import Schedule from "./components/Schedule";
 import Settings from "./components/Settings";
-import EventBus from "./event-bus.js"
-import sendRequest from "./requests.js"
+import EventBus from "./event-bus.js";
+import sendRequest from "./requests.js";
 
 export default {
   name: "App",
@@ -113,13 +112,19 @@ export default {
   },
 
   data: () => ({
-    connected: true, // TODO check for connection
+    status: {
+      ok: true,
+      message: ""
+    },
     drawer: false,
-    page: "controls"
+    page: "controls",
+    measurementTimer: 0,
+    statusTimer: 0
   }),
 
   created: function() {
-    this.startMeasurement()
+    this.startMeasurement();
+    this.startMonitor();
   },
 
   methods: {
@@ -129,16 +134,27 @@ export default {
     },
 
     startMeasurement() {
-      this.measurements = []
-      setInterval(() => {
-        sendRequest('getMeasurement').then((data) => {
-          this.measurements.push(data)
-          EventBus.$emit('new-measurement', data)
-        })
-      }, 5000)
-    }
+      this.measurements = [];
+      this.measurementTimer = setInterval(() => {
+        sendRequest("getMeasurement").then(data => {
+          this.measurements.push(data);
+          EventBus.$emit("new-measurement", data);
+        });
+      }, 2500);
+    },
 
+    startMonitor() {
+      this.statusTimer = setInterval(() => {
+        sendRequest("getStatus")
+          .then(data => {
+            console.log(data);
+            this.status = data;
+          })
+          .catch(() => {
+            this.status = { ok: false, message: "Could not get Status!" };
+          });
+      }, 2000);
+    }
   }
 };
-
 </script>

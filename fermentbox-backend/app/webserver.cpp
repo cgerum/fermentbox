@@ -5,6 +5,7 @@
 #include "configuration.h"
 #include "schedule.h"
 #include "sensors.h"
+#include "status.h"
 #include "webserver.h"
 
 static const String RES_OK = String("{\"res\": \"ok\"}");
@@ -201,6 +202,24 @@ void onScheduleList(HttpRequest &request, HttpResponse &response) {
   response.sendString(result);
 }
 
+void onStatus(HttpRequest &request, HttpResponse &response) {
+  String result;
+  result += "{";
+  result += "\"ok\":";
+  auto status = get_status();
+  if (status == STATUS_NORMAL) {
+    result += "true";
+  } else {
+    result += "false";
+  }
+  result += ", ";
+  result += "\"message\": \"";
+  result += get_status_message();
+  result += "\"}";
+  response.setContentType(MIME_JSON);
+  response.sendString(result);
+};
+
 void startWebServer() {
   if (serverStarted)
     return;
@@ -210,6 +229,7 @@ void startWebServer() {
   server.paths.set("/networkConfig", onNetworkConfig);
   server.paths.set("/getConfig", onGetConfig);
   server.paths.set("/getMeasurement", onGetMeasurement);
+  server.paths.set("/getStatus", onStatus);
 
   server.paths.set("/schedule/load", onScheduleLoad);
   server.paths.set("/schedule/save", onScheduleSave);

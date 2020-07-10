@@ -10,7 +10,7 @@
 #define VENTILATOR_PIN 13 // D7
 #define HUMIDIFIER_PIN 2
 
-#define HYSTERESIS_ON 0.018f
+#define HYSTERESIS_ON 0.028f
 #define HYSTERESIS_OFF 0.017f
 #define COOLDOWN 10
 
@@ -134,9 +134,9 @@ void onControlStep() {
 void startControlLoop() {
   state.timer.initializeMs(1000, onControlStep).start();
 
-  state.temperature_active = false;
+  state.temperature_active = true;
   state.humidity_active = false;
-  state.target_temperature = 30.0f;
+  state.target_temperature = 28.0f;
   state.target_humidity = 50.0f;
 
   // Initialize IO
