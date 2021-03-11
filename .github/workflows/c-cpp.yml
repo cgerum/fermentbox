@@ -14,5 +14,5 @@ jobs:
     steps:
     - uses: actions/checkout@v2
     - name: make
-      run: cd ferementbox-backend && make
+      run: cd fermentbox-backend && make
 
