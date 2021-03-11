@@ -14,8 +14,9 @@ jobs:
     steps:
     - uses: actions/checkout@v2
     - name: make
+      run: git clone https://github.com/SmingHub/Sming.git
+    - name: make
       run: |
-        git clone https://github.com/SmingHub/Sming.git
         export SMING_HOME=$PWD/Sming
         cd fermentbox-backend 
         make
