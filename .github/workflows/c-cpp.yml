@@ -13,11 +13,15 @@ jobs:
 
     steps:
     - uses: actions/checkout@v2
-    - name: make
+    - name: clone_sming
       run: git clone https://github.com/SmingHub/Sming.git
+    - name: Build Sming
+      cd Tools
+      sudo Sming/Tools/install.sh host
+      . Sming/Tools/export.sh
     - name: make
       run: |
         export SMING_HOME=$PWD/Sming
         cd fermentbox-backend 
-        make
+        make -j4 SMING_ARCH=Host
 
