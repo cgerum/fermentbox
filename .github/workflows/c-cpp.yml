@@ -16,6 +16,7 @@ jobs:
     - name: clone_sming
       run: git clone https://github.com/SmingHub/Sming.git
     - name: Build Sming
+      run: |
       cd Tools
       sudo Sming/Tools/install.sh host
       . Sming/Tools/export.sh
