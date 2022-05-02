@@ -21,7 +21,7 @@ jobs:
         . Sming/Tools/export.sh
     - name: make
       run: |
-        export SMING_HOME=$PWD/Sming
+        source /home/runner/work/fermentbox/fermentbox/Sming/Sming/../Tools/export.sh
         cd fermentbox-backend 
         make -j4 SMING_ARCH=Host
 
