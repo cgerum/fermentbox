@@ -3,6 +3,7 @@
 #include <JsonObjectStream.h>
 
 #include "configuration.h"
+#include "control_loop.h"
 #include "schedule.h"
 #include "sensors.h"
 #include "status.h"
