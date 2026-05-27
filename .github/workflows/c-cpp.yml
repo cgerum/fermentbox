@@ -13,6 +13,8 @@ jobs:
 
     steps:
     - uses: actions/checkout@v2
+    - name: Run backend unit tests
+      run: make test-backend-unit
     - name: clone_sming
       run: git clone https://github.com/SmingHub/Sming.git
     - name: Build Sming
@@ -190,4 +192,3 @@ jobs:
       run: |
         pkill -f 'fermentbox-backend/out/Host/debug/firmware/app' || true
         sudo ip link delete tap0 || true
-
