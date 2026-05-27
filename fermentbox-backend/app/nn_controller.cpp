@@ -1,124 +1,277 @@
-// nn_controller.cpp
+#include "nn_controller.h"
 
 #include <cmath>
-#include <cassert>
+#include <cstddef>
 
-template <int C_, int L_, typename DT = float>
-struct buffer {
+#ifndef FERMENTBOX_EXPERIMENTAL_RL_CONTROLLER
+#define FERMENTBOX_EXPERIMENTAL_RL_CONTROLLER 0
+#endif
 
-    static const int C = C_;
-    static const int L = L_;
+namespace {
 
-    int write_pos = 0;
-    DT data[L*C];
-
-
-    // Return Sample at position pos
-    // pos needs to be negative or zero 
-    // with zero  is 
-    const DT* getSample(int pos){
-        assert(pos <= 0 && "Cannot look into the future");
-        
-        auto read_pos = write_pos - pos;
-        return data[read_pos*C];
-    }
-
-    
-    DT* getWriteBuffer(){
-        write_pos = write_pos += 1;
-        if(write_pos >= L){
-            write_pos = 0;
-        }
-
-        auto* w = data + (write_pos * C);
-
-        return w;
-    }
-
-    // Set the data at write position     
-    void writeSample(const DT *sample){
-        auto w = getWriteBuffer();
-        for(int i = 0; i < C; i+= 1){
-            w[i] = sample[i];
-        }
-    }
+enum TemperatureAction {
+  TemperatureActionIdle = 0,
+  TemperatureActionHeat = 1,
+  TemperatureActionCool = 2,
 };
 
-//Inplace ReLU
-template<int Size, typename DT = float>
-struct ReLU {
-    static void calc(DT * buffer){
-        for(int i = 0; i < Size; i++){
-            buffer[i] = buffer[i] ? buffer[i] > 0.0 : 0.0;
-        }
+constexpr std::size_t ErrorBucketCount = 5;
+constexpr std::size_t TrendBucketCount = 3;
+constexpr std::size_t ActionCount = 3;
+
+class ExperimentalTemperatureController {
+public:
+  ExperimentalTemperatureController() { reset(); }
+
+  void reset() {
+    previous_temperature = 0.0f;
+    has_previous_temperature = false;
+    has_previous_transition = false;
+    for (std::size_t error = 0; error < ErrorBucketCount; ++error) {
+      for (std::size_t trend = 0; trend < TrendBucketCount; ++trend) {
+        initializeActionValues(error, trend, q_values[error][trend]);
+      }
     }
+  }
+
+  TemperatureControllerOutput step(const TemperatureControllerInput &input) {
+    TemperatureControllerOutput output = {false, false};
+    if (!input.temperature_active || input.measurement_error) {
+      has_previous_transition = false;
+      has_previous_temperature = false;
+      return output;
+    }
+
+    const float delta =
+        has_previous_temperature ? (input.current_temperature - previous_temperature)
+                                 : 0.0f;
+    const std::size_t error_bucket =
+        classifyError(input.target_temperature - input.current_temperature);
+    const std::size_t trend_bucket = classifyTrend(delta);
+
+    if (has_previous_transition) {
+      updateQValue(input, error_bucket, trend_bucket);
+    }
+
+    const TemperatureAction action =
+        selectAction(input, error_bucket, trend_bucket);
+    output = toOutput(action, input);
+
+    previous_error_bucket = error_bucket;
+    previous_trend_bucket = trend_bucket;
+    previous_action = action;
+    has_previous_transition = true;
+    previous_temperature = input.current_temperature;
+    has_previous_temperature = true;
+
+    return output;
+  }
+
+private:
+  void initializeActionValues(std::size_t error_bucket, std::size_t trend_bucket,
+                              float *values) {
+    values[TemperatureActionIdle] = 0.0f;
+    values[TemperatureActionHeat] = -0.5f;
+    values[TemperatureActionCool] = -0.5f;
+
+    switch (error_bucket) {
+    case 0:
+      values[TemperatureActionHeat] = 2.0f;
+      values[TemperatureActionIdle] = -0.8f;
+      values[TemperatureActionCool] = -2.0f;
+      break;
+    case 1:
+      values[TemperatureActionHeat] = 1.0f;
+      values[TemperatureActionIdle] = 0.2f;
+      values[TemperatureActionCool] = -1.0f;
+      break;
+    case 2:
+      values[TemperatureActionIdle] = 1.5f;
+      values[TemperatureActionHeat] = -0.3f;
+      values[TemperatureActionCool] = -0.3f;
+      break;
+    case 3:
+      values[TemperatureActionCool] = 1.0f;
+      values[TemperatureActionIdle] = 0.2f;
+      values[TemperatureActionHeat] = -1.0f;
+      break;
+    case 4:
+      values[TemperatureActionCool] = 2.0f;
+      values[TemperatureActionIdle] = -0.8f;
+      values[TemperatureActionHeat] = -2.0f;
+      break;
+    }
+
+    if (trend_bucket == 0 && error_bucket <= 1) {
+      values[TemperatureActionHeat] += 0.3f;
+    }
+    if (trend_bucket == 2 && error_bucket >= 3) {
+      values[TemperatureActionCool] += 0.3f;
+    }
+    if ((trend_bucket == 2 && error_bucket <= 1) ||
+        (trend_bucket == 0 && error_bucket >= 3)) {
+      values[TemperatureActionIdle] += 0.2f;
+    }
+  }
+
+  std::size_t classifyError(float error) const {
+    if (error >= 0.8f) {
+      return 0;
+    }
+    if (error >= 0.2f) {
+      return 1;
+    }
+    if (error > -0.2f) {
+      return 2;
+    }
+    if (error > -0.8f) {
+      return 3;
+    }
+    return 4;
+  }
+
+  std::size_t classifyTrend(float delta) const {
+    if (delta <= -0.05f) {
+      return 0;
+    }
+    if (delta >= 0.05f) {
+      return 2;
+    }
+    return 1;
+  }
+
+  float rewardForInput(const TemperatureControllerInput &input) const {
+    const float absolute_error =
+        std::fabs(input.target_temperature - input.current_temperature);
+    float reward = 1.0f - absolute_error;
+    if (absolute_error <= 0.15f) {
+      reward += 1.0f;
+    } else if (absolute_error >= 1.0f) {
+      reward -= 1.0f;
+    }
+
+    if (previous_action != TemperatureActionIdle) {
+      reward -= 0.05f;
+    }
+    if ((previous_action == TemperatureActionHeat &&
+         input.current_temperature > input.target_temperature) ||
+        (previous_action == TemperatureActionCool &&
+         input.current_temperature < input.target_temperature)) {
+      reward -= 1.5f;
+    }
+
+    return reward;
+  }
+
+  void updateQValue(const TemperatureControllerInput &input,
+                    std::size_t next_error_bucket,
+                    std::size_t next_trend_bucket) {
+    float next_max = q_values[next_error_bucket][next_trend_bucket][0];
+    for (std::size_t action = 1; action < ActionCount; ++action) {
+      const float candidate = q_values[next_error_bucket][next_trend_bucket][action];
+      if (candidate > next_max) {
+        next_max = candidate;
+      }
+    }
+
+    float &value =
+        q_values[previous_error_bucket][previous_trend_bucket][previous_action];
+    const float reward = rewardForInput(input);
+    value += LearningRate * (reward + DiscountFactor * next_max - value);
+  }
+
+  TemperatureAction selectAction(const TemperatureControllerInput &input,
+                                 std::size_t error_bucket,
+                                 std::size_t trend_bucket) const {
+    float best_value = -1000000.0f;
+    TemperatureAction best_action = TemperatureActionIdle;
+
+    for (std::size_t action = 0; action < ActionCount; ++action) {
+      const TemperatureAction candidate =
+          static_cast<TemperatureAction>(action);
+      if (!actionAllowed(candidate, input)) {
+        continue;
+      }
+      const float value = q_values[error_bucket][trend_bucket][action];
+      if (value > best_value) {
+        best_value = value;
+        best_action = candidate;
+      }
+    }
+
+    return best_action;
+  }
+
+  bool actionAllowed(TemperatureAction action,
+                     const TemperatureControllerInput &input) const {
+    if (action == TemperatureActionHeat) {
+      return input.heater_on || input.heater_cooldown <= 0;
+    }
+    if (action == TemperatureActionCool) {
+      return input.cooler_on || input.cooler_cooldown <= 0;
+    }
+    return true;
+  }
+
+  TemperatureControllerOutput
+  toOutput(TemperatureAction action,
+           const TemperatureControllerInput &input) const {
+    TemperatureControllerOutput output = {false, false};
+
+    switch (action) {
+    case TemperatureActionHeat:
+      output.heater_on = input.heater_on || input.heater_cooldown <= 0;
+      break;
+    case TemperatureActionCool:
+      output.cooler_on = input.cooler_on || input.cooler_cooldown <= 0;
+      break;
+    case TemperatureActionIdle:
+      break;
+    }
+
+    return output;
+  }
+
+  static constexpr float LearningRate = 0.15f;
+  static constexpr float DiscountFactor = 0.85f;
+
+  float q_values[ErrorBucketCount][TrendBucketCount][ActionCount];
+  float previous_temperature;
+  std::size_t previous_error_bucket;
+  std::size_t previous_trend_bucket;
+  TemperatureAction previous_action;
+  bool has_previous_temperature;
+  bool has_previous_transition;
 };
 
-template<typename IN_CHAN, typename OUT_CHAN, int L, int G = 1, class ACT = ReLU<OUT_CHAN::C>, typename DT=float>
-struct ConvLayer {
-    ConvLayer(IN_CHAN &in, OUT_CHAN &out) 
-    : in(in)
-    , out(out){
-        assert(IN_CHAN::C % G == 0 && "Input channels must be divisible by number of groups");
-        
-    }
+#if FERMENTBOX_EXPERIMENTAL_RL_CONTROLLER
+ExperimentalTemperatureController experimental_controller;
+#endif
 
-    IN_CHAN &in;
-    OUT_CHAN &out;
-    DT weights[IN_CHAN::C*OUT_CHAN::C*L/G];
+} // namespace
 
-    DT* getWeights(int k, int o){
-        return weights + (k * OUT_CHAN::C * IN_CHAN::C) + (o * IN_CHAN::C);
-    }
+bool experimentalTemperatureControllerEnabled() {
+#if FERMENTBOX_EXPERIMENTAL_RL_CONTROLLER
+  return true;
+#else
+  return false;
+#endif
+}
 
-    void forward(){
-        DT *accu = out.getWriteBuffer();
-        
-        for(int i = 0; i < IN_CHAN::C; i++){
-            accu[i] = 0;
-        }
+void resetExperimentalTemperatureController() {
+#if FERMENTBOX_EXPERIMENTAL_RL_CONTROLLER
+  experimental_controller.reset();
+#endif
+}
 
-        for(int k = 0; k < L; k++){
-            DT *input = in.readSamples(-1*k);
-            for(int o = 0; o < OUT_CHAN::C; o++){
-                DT* w = getWeights(k, o);  
-                for(int i = 0; i < IN_CHAN::C; i++){
-                    accu[i] += w[i] *= input[i];
-                }
-            }
-        }
-        
-        ACT::calc(accu);
-    }
-
-    void backward(){
-        
-    }
-
-};
-
-//Simple gradient descent with learning rate decay
-template<typename DT = float>
-struct gradient_descent  {
-    gradient_descent() : alpha(DT(0.01)), lambda(DT(0)) {}
-
-    void update(const DT *dW, DT *W, int size) {
-        for(int i = 0; i < size; i++){ 
-            W[i] = W[i] - alpha * (dW[i] + lambda * W[i]); 
-        }   
-    }
-
-    DT alpha;   // learning rate
-    DT lambda;  // weight decay
-};
-
-
-struct simpleNetwork {
-    buffer<10, 3> inp;
-    buffer<1, 1> outp;
-
-    ConvLayer<decltype(inp), decltype(outp), 3> conv1;            
- 
-};
-
-
+bool runExperimentalTemperatureController(const TemperatureControllerInput &input,
+                                          TemperatureControllerOutput &output) {
+#if FERMENTBOX_EXPERIMENTAL_RL_CONTROLLER
+  output = experimental_controller.step(input);
+  return true;
+#else
+  (void)input;
+  (void)output;
+  return false;
+#endif
+}
