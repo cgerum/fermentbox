@@ -13,7 +13,7 @@
     </v-app-bar>
 
     <v-content>
-      <v-alert v-if="!status.ok" type="error">{{status.message}}</v-alert>
+      <v-alert v-if="!status.ok" type="error">{{ status.message }}</v-alert>
 
       <v-navigation-drawer v-model="drawer" absolute temporary>
         <v-list>
@@ -46,7 +46,9 @@
 
       <div v-show="page === 'controls'">
         <div class="page-title">
-          <v-icon large color="accent" class="page-title-icon">mdi-file-table-box-outline</v-icon>
+          <v-icon large color="accent" class="page-title-icon"
+            >mdi-file-table-box-outline</v-icon
+          >
           <span>Controls</span>
         </div>
         <v-list>
@@ -61,7 +63,9 @@
 
       <div v-show="page === 'schedule'">
         <div class="page-title">
-          <v-icon large color="accent" class="page-title-icon">mdi-timer-outline</v-icon>
+          <v-icon large color="accent" class="page-title-icon"
+            >mdi-timer-outline</v-icon
+          >
           <span>Schedule</span>
         </div>
         <schedule></schedule>
@@ -99,7 +103,7 @@ import HumidityControl from "./components/HumidityControl";
 import Schedule from "./components/Schedule";
 import Settings from "./components/Settings";
 import EventBus from "./event-bus.js";
-import sendRequest from "./requests.js";
+import apiService from "./services/api.js";
 
 export default {
   name: "App",
@@ -108,23 +112,28 @@ export default {
     TemperatureControl,
     HumidityControl,
     Schedule,
-    Settings
+    Settings,
   },
 
   data: () => ({
     status: {
       ok: true,
-      message: ""
+      message: "",
     },
     drawer: false,
     page: "controls",
     measurementTimer: 0,
-    statusTimer: 0
+    statusTimer: 0,
   }),
 
-  created: function() {
+  created: function () {
     this.startMeasurement();
     this.startMonitor();
+  },
+
+  beforeDestroy: function () {
+    clearInterval(this.measurementTimer);
+    clearInterval(this.statusTimer);
   },
 
   methods: {
@@ -136,7 +145,7 @@ export default {
     startMeasurement() {
       this.measurements = [];
       this.measurementTimer = setInterval(() => {
-        sendRequest("getMeasurement").then(data => {
+        apiService.getMeasurement().then((data) => {
           this.measurements.push(data);
           EventBus.$emit("new-measurement", data);
         });
@@ -145,8 +154,9 @@ export default {
 
     startMonitor() {
       this.statusTimer = setInterval(() => {
-        sendRequest("getStatus")
-          .then(data => {
+        apiService
+          .getStatus()
+          .then((data) => {
             console.log(data);
             this.status = data;
           })
@@ -154,7 +164,7 @@ export default {
             this.status = { ok: false, message: "Could not get Status!" };
           });
       }, 2000);
-    }
-  }
+    },
+  },
 };
 </script>

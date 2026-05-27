@@ -11,7 +11,7 @@
             <v-text-field
               v-model="appPassword"
               label="Password"
-              :type="showAppPassword ? 'text': 'password'"
+              :type="showAppPassword ? 'text' : 'password'"
               :append-icon="showAppPassword ? 'mdi-eye' : 'mdi-eye-off'"
               @click:append="showAppPassword = !showAppPassword"
               clearable
@@ -32,16 +32,18 @@
             <span class="card-title">Wi-Fi</span>
           </v-card-title>
           <v-card-text>
-            <v-text-field v-model="wifiSSID" label="SSID" clearable>{{wifiSSID}}</v-text-field>
+            <v-text-field v-model="wifiSSID" label="SSID" clearable>{{
+              wifiSSID
+            }}</v-text-field>
             <v-text-field
               v-model="wifiPassword"
               label="Password"
-              :type="showWifiPassword ? 'text': 'password'"
+              :type="showWifiPassword ? 'text' : 'password'"
               :append-icon="showWifiPassword ? 'mdi-eye' : 'mdi-eye-off'"
               @click:append="showWifiPassword = !showWifiPassword"
               clearable
             >
-            {{wifiPassword}}
+              {{ wifiPassword }}
             </v-text-field>
           </v-card-text>
           <v-card-actions>
@@ -68,7 +70,7 @@
 </style>
 
 <script>
-import sendRequest from '../requests.js'
+import apiService from "../services/api.js";
 
 export default {
   name: "Settings",
@@ -78,21 +80,21 @@ export default {
     showAppPassword: false,
     wifiSSID: null,
     wifiPassword: null,
-    showWifiPassword: false
+    showWifiPassword: false,
   }),
-  created: function() {
+  created: function () {
     this.getConfig();
   },
   methods: {
-    storeAppPassword: function() {
+    storeAppPassword: function () {
       // TODO store app password
     },
-    getConfig: function() {
-      sendRequest('getConfig').then((data) => {
-        this.wifiSSID = data.Wifi.SSID
-        this.wifiPassword = data.Wifi.Password
-      })
-    } 
-  }
+    getConfig: function () {
+      apiService.getConfig().then((data) => {
+        this.wifiSSID = data.Wifi.SSID;
+        this.wifiPassword = data.Wifi.Password;
+      });
+    },
+  },
 };
 </script>

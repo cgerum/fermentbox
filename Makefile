@@ -1,5 +1,10 @@
 all: frontend backend
 
+.PHONY: test-frontend
+test-frontend:
+	cd fermentbox-frontend && yarn install --ignore-engines
+	cd fermentbox-frontend && yarn test
+
 .PHONY: frontend
 frontend:
 	cd fermentbox-frontend && yarn install

@@ -201,7 +201,7 @@
 
 <script>
 import draggable from "vuedraggable";
-import sendRequest from "../requests.js";
+import apiService from "../services/api.js";
 export default {
   name: "Schedule",
   components: {
@@ -223,12 +223,12 @@ export default {
   }),
 
   computed: {
-    dialogType: function() {
+    dialogType: function () {
       return this.addTaskDialog.label.toLowerCase();
     },
   },
 
-  created: function() {
+  created: function () {
     this.loadSchedules();
   },
 
@@ -237,7 +237,7 @@ export default {
       this.loadTasks();
     },
     loadSchedules(activeSchedule = "") {
-      sendRequest("schedule/list").then((data) => {
+      apiService.schedule.list().then((data) => {
         this.schedules = data;
         data = data.sort();
         if (activeSchedule !== "" && data.includes(activeSchedule)) {
@@ -258,7 +258,7 @@ export default {
         count += 1;
       }
 
-      sendRequest("schedule/save", { name: new_name }, "[]").then(() => {
+      apiService.schedule.save(new_name, "[]").then(() => {
         this.loadSchedules(new_name);
       });
     },
@@ -269,7 +269,7 @@ export default {
     deleteSchedule() {
       const schedule_name = this.currentSchedule;
       if (schedule_name) {
-        sendRequest("schedule/delete", { name: schedule_name }).then(() => {
+        apiService.schedule.remove(schedule_name).then(() => {
           this.loadSchedules();
         });
       }
@@ -278,7 +278,7 @@ export default {
     runSchedule() {
       const schedule_name = this.currentSchedule;
       if (schedule_name) {
-        sendRequest("schedule/start", { name: schedule_name });
+        apiService.schedule.start(schedule_name);
       }
     },
 
@@ -291,65 +291,63 @@ export default {
       console.log("Loading tasks");
       console.log(this.currentSchedule);
 
-      sendRequest("schedule/load", { name: this.currentSchedule }).then(
-        (data) => {
-          this.tasks = [];
-          let count = 0;
-          data.forEach((element) => {
-            let temperature = 0;
-            let temperatureStart = 0;
-            let temperatureEnd = 0;
-            let controlTemperature = false;
+      apiService.schedule.load(this.currentSchedule).then((data) => {
+        this.tasks = [];
+        let count = 0;
+        data.forEach((element) => {
+          let temperature = 0;
+          let temperatureStart = 0;
+          let temperatureEnd = 0;
+          let controlTemperature = false;
 
-            if (element.temperature_active) {
-              controlTemperature = true;
-              temperature = element.temperature_start;
-              temperatureStart = element.remperature_start;
-              if (element.temperature_end) {
-                temperatureEnd = element.temperature_end;
-              } else {
-                temperatureEnd = temperatureStart;
-              }
+          if (element.temperature_active) {
+            controlTemperature = true;
+            temperature = element.temperature_start;
+            temperatureStart = element.remperature_start;
+            if (element.temperature_end) {
+              temperatureEnd = element.temperature_end;
+            } else {
+              temperatureEnd = temperatureStart;
             }
+          }
 
-            let humidity = 0;
-            let humidityStart = 0;
-            let humidityEnd = 0;
-            let controlHumidity = false;
+          let humidity = 0;
+          let humidityStart = 0;
+          let humidityEnd = 0;
+          let controlHumidity = false;
 
-            if (element.humidity_active) {
-              controlHumidity = true;
-              humidity = element.humidity_start;
-              humidityStart = element.humidity_start;
-              if (element.humidity_end) {
-                humidityEnd = element.humidity_end;
-              } else {
-                humidityEnd = humidityStart;
-              }
+          if (element.humidity_active) {
+            controlHumidity = true;
+            humidity = element.humidity_start;
+            humidityStart = element.humidity_start;
+            if (element.humidity_end) {
+              humidityEnd = element.humidity_end;
+            } else {
+              humidityEnd = humidityStart;
             }
+          }
 
-            this.tasks.push({
-              id: this.currentSchedule + "_task" + count,
-              duration: element.duration,
-              controlTemperature: controlTemperature,
-              controlHumidity: controlHumidity,
-              active: false,
-              temperature: temperature,
-              humidity: humidity,
-              temperatureStart: temperatureStart,
-              temperatureEnd: temperatureEnd,
-              humidityStart: humidityStart,
-              humidityEnd: humidityEnd,
-            });
-            count += 1;
+          this.tasks.push({
+            id: this.currentSchedule + "_task" + count,
+            duration: element.duration,
+            controlTemperature: controlTemperature,
+            controlHumidity: controlHumidity,
+            active: false,
+            temperature: temperature,
+            humidity: humidity,
+            temperatureStart: temperatureStart,
+            temperatureEnd: temperatureEnd,
+            humidityStart: humidityStart,
+            humidityEnd: humidityEnd,
           });
-        }
-      );
+          count += 1;
+        });
+      });
     },
-    storeTasks: function() {
+    storeTasks: function () {
       // TOO store tasks
     },
-    getTitle: function(task) {
+    getTitle: function (task) {
       let title = "";
       if (task.controlTemperature) {
         title = `${title}${task.temperature}°C Temperature`;
@@ -362,10 +360,10 @@ export default {
       }
       return title;
     },
-    getSubTitle: function(task) {
+    getSubTitle: function (task) {
       return `Duration: ${task.duration} hours`;
     },
-    openAddTaskDialog: function(task) {
+    openAddTaskDialog: function (task) {
       if (task) {
         this.addTaskDialog.task = task;
         this.addTaskDialog.controlTemperature = task.controlTemperature;
@@ -380,7 +378,7 @@ export default {
 
       this.showAddTaskDialog = true;
     },
-    addTask: function() {
+    addTask: function () {
       // TODO validate input
       this.tasks.push({
         id: this.generateId(),
@@ -392,7 +390,7 @@ export default {
       });
       this.showAddTaskDialog = false;
     },
-    editTask: function() {
+    editTask: function () {
       // TODO validate input
       const task = this.addTaskDialog.task;
       task.controlTemperature = this.addTaskDialog.controlTemperature;
@@ -402,7 +400,7 @@ export default {
       task.duration = this.addTaskDialog.duration;
       this.showAddTaskDialog = false;
     },
-    removeTask: function(task) {
+    removeTask: function (task) {
       this.tasks = this.tasks.filter((t) => t.id !== task.id);
     },
     generateId() {
