@@ -17,6 +17,12 @@ test-frontend:
 test-backend-api-host:
 	node scripts/test-backend-api-host.mjs
 
+.PHONY: test-backend-unit
+test-backend-unit:
+	mkdir -p /tmp/fermentbox-backend-unit-tests
+	c++ -std=c++17 -Wall -Wextra -pedantic -DFERMENTBOX_EXPERIMENTAL_RL_CONTROLLER=1 -Ifermentbox-backend/include fermentbox-backend/tests/nn_controller_test.cpp fermentbox-backend/app/nn_controller.cpp -o /tmp/fermentbox-backend-unit-tests/nn_controller_test
+	/tmp/fermentbox-backend-unit-tests/nn_controller_test
+
 .PHONY: test-backend-browser-e2e
 test-backend-browser-e2e:
 	node scripts/test-backend-browser-e2e.mjs

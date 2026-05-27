@@ -22,6 +22,14 @@ Requirements:
 
 These are configured by `.devcontainer/devcontainer.json` (`NET_ADMIN` + `/dev/net/tun`) and `.devcontainer/post-start.sh`.
 
+## Backend Unit Tests
+
+Run backend-only temperature controller unit tests (no Sming/hardware required):
+
+```bash
+make test-backend-unit
+```
+
 ## Backend Browser Tests
 
 Run the host-backed browser end-to-end checks:
