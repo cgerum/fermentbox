@@ -114,20 +114,20 @@ Responsibilities:
   - `STATUS_SENSOR_FAILED`
 - Provide human-readable status text for API consumers.
 
-### 3.6 Schedule Subsystem (Partial)
+### 3.6 Schedule Subsystem
 
 Files:
 
 - `include/schedule.h`
 - `app/schedule.cpp`
 
-Responsibilities today:
+Responsibilities:
 
 - Build schedule filename convention: `.sch-{name}.json`.
-- Load and parse schedule JSON file, currently logging durations.
-- Provide `startSchedule(name)` and `stopSchedule()` entrypoints.
-
-Important note: schedule execution logic is not yet implemented beyond loading/parsing.
+- Validate schedule JSON steps on start.
+- Execute schedule steps once per second and update control loop targets.
+- Interpolate target values between `*_start` and `*_end` over step duration.
+- Provide `startSchedule(name)` and `stopSchedule()` lifecycle entrypoints.
 
 ### 3.7 Logging Subsystem
 
@@ -253,7 +253,9 @@ Files:
 
 1. Frontend edits/creates schedule JSON and saves via `/schedule/save`.
 2. Backend stores schedule file in SPIFFS with `.sch-{name}.json` naming.
-3. `/schedule/start` loads schedule; execution behavior is currently not implemented.
+3. `/schedule/start` validates and starts timed schedule execution.
+4. Every second, schedule engine advances the active step and updates control loop targets.
+5. `/schedule/stop` stops execution and restores pre-schedule control targets.
 
 ## 6. Build and Deployment Pipeline
 

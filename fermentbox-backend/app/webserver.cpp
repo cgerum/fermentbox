@@ -165,8 +165,13 @@ void onScheduleDelete(HttpRequest &request, HttpResponse &response) {
 
 void onScheduleStart(HttpRequest &request, HttpResponse &response) {
   String name = request.getQueryParameter("name");
-  String filename = getScheduleFileName(name);
-  startSchedule(name);
+  String error;
+  if (!startSchedule(name, &error)) {
+    response.code = HTTP_STATUS_BAD_REQUEST;
+    response.setContentType(MIME_JSON);
+    response.sendString(String("{\"error\":\"") + error + String("\"}"));
+    return;
+  }
 
   response.setContentType(MIME_JSON);
   response.sendString(RES_OK);
