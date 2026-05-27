@@ -112,6 +112,10 @@ Responsibilities:
 - Maintain global service status enum:
   - `STATUS_NORMAL`
   - `STATUS_SENSOR_FAILED`
+  - `STATUS_NETWORK_UNAVAILABLE`
+  - `STATUS_CONFIG_MISSING`
+  - `STATUS_SCHEDULE_INACTIVE`
+  - `STATUS_CONTROL_IDLE`
 - Provide human-readable status text for API consumers.
 
 ### 3.6 Schedule Subsystem
@@ -171,7 +175,7 @@ Routes:
 - `POST /networkConfig` -> update Wi-Fi config, persist, reconfigure station
 - `GET /getConfig` -> returns saved Wi-Fi config
 - `GET /getMeasurement` -> latest sample `{date, temperature, humidity}`
-- `GET /getStatus` -> `{ok, message}`
+- `GET /getStatus` -> `{ok, message, code, codes, dimensions}`
 - `GET /schedule/load?name=...` -> raw schedule JSON file
 - `POST /schedule/save?name=...` -> write schedule file
 - `GET /schedule/delete?name=...` -> delete schedule file

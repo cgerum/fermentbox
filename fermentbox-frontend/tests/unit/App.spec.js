@@ -55,11 +55,17 @@ describe("App", () => {
     it("startMonitor updates status and handles failures", async () => {
         jest.useFakeTimers();
         apiService.getStatus
-            .mockResolvedValueOnce({ ok: true, message: "all good" })
+            .mockResolvedValueOnce({
+                ok: true,
+                message: "Normal",
+                code: "normal",
+                codes: ["normal", "schedule_inactive"]
+            })
             .mockRejectedValueOnce(new Error("network"));
 
         const vm = {
-            status: { ok: true, message: "" },
+            status: { ok: true, message: "", detailMessages: [] },
+            normalizeStatus: App.methods.normalizeStatus,
             statusTimer: 0
         };
 
@@ -67,12 +73,38 @@ describe("App", () => {
 
         jest.advanceTimersByTime(2000);
         await Promise.resolve();
-        expect(vm.status).toEqual({ ok: true, message: "all good" });
+        expect(vm.status).toEqual({
+            ok: true,
+            message: "Normal",
+            code: "normal",
+            codes: ["normal", "schedule_inactive"],
+            detailMessages: ["No schedule running"]
+        });
 
         jest.advanceTimersByTime(2000);
         await Promise.resolve();
         await Promise.resolve();
-        expect(vm.status).toEqual({ ok: false, message: "Could not get Status!" });
+        expect(vm.status).toEqual({
+            ok: false,
+            message: "Could not get Status!",
+            code: "normal",
+            codes: ["normal"],
+            detailMessages: []
+        });
+    });
+
+    it("normalizeStatus maps known codes to detail messages", () => {
+        const normalized = App.methods.normalizeStatus({
+            ok: true,
+            message: "Normal",
+            code: "normal",
+            codes: ["normal", "schedule_inactive", "control_idle"]
+        });
+
+        expect(normalized.detailMessages).toEqual([
+            "No schedule running",
+            "Control loop is idle"
+        ]);
     });
 
     it("created starts both monitor loops", () => {

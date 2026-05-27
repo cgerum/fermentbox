@@ -207,6 +207,21 @@ export interface components {
         Status: {
             ok: boolean;
             message: string;
+            /** @enum {string} */
+            code: "normal" | "sensor_failed" | "network_unavailable" | "config_missing";
+            codes: ("normal" | "sensor_failed" | "network_unavailable" | "config_missing" | "schedule_inactive" | "control_idle")[];
+            dimensions: {
+                sensor: components["schemas"]["StatusDimension"];
+                network: components["schemas"]["StatusDimension"];
+                config: components["schemas"]["StatusDimension"];
+                schedule: components["schemas"]["StatusDimension"];
+                control: components["schemas"]["StatusDimension"];
+            };
+        };
+        StatusDimension: {
+            code: string;
+            message: string;
+            ok: boolean;
         };
         ScheduleList: string[];
         Schedule: components["schemas"]["ScheduleTask"][];

@@ -274,3 +274,5 @@ bool startSchedule(String &name, String *errorMessage) {
 }
 
 void stopSchedule() { currentSchedule.stop(true); }
+
+bool isScheduleActive() { return currentSchedule.isActive(); }

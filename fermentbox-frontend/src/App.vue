@@ -14,6 +14,9 @@
 
     <v-content>
       <v-alert v-if="!status.ok" type="error">{{ status.message }}</v-alert>
+      <v-alert v-else-if="status.detailMessages.length > 0" type="info">
+        {{ status.detailMessages.join("; ") }}
+      </v-alert>
 
       <v-navigation-drawer v-model="drawer" absolute temporary>
         <v-list>
@@ -119,6 +122,9 @@ export default {
     status: {
       ok: true,
       message: "",
+      code: "normal",
+      codes: ["normal"],
+      detailMessages: [],
     },
     drawer: false,
     page: "controls",
@@ -137,6 +143,32 @@ export default {
   },
 
   methods: {
+    normalizeStatus(nextStatus) {
+      const status = {
+        ok: true,
+        message: "",
+        code: "normal",
+        codes: ["normal"],
+        ...nextStatus,
+      };
+      const codeMessages = {
+        sensor_failed: "Temperature/Humidity sensor failed",
+        network_unavailable: "Network connection unavailable",
+        config_missing: "Wi-Fi configuration missing",
+        schedule_inactive: "No schedule running",
+        control_idle: "Control loop is idle",
+      };
+      const codes = Array.isArray(status.codes) && status.codes.length > 0
+        ? status.codes
+        : [status.code];
+      status.codes = codes;
+      status.detailMessages = codes
+        .filter((code) => code !== "normal")
+        .map((code) => codeMessages[code])
+        .filter(Boolean);
+      return status;
+    },
+
     setPage(name) {
       this.page = name;
       this.drawer = false;
@@ -158,10 +190,13 @@ export default {
           .getStatus()
           .then((data) => {
             console.log(data);
-            this.status = data;
+            this.status = this.normalizeStatus(data);
           })
           .catch(() => {
-            this.status = { ok: false, message: "Could not get Status!" };
+            this.status = this.normalizeStatus({
+              ok: false,
+              message: "Could not get Status!",
+            });
           });
       }, 2000);
     },

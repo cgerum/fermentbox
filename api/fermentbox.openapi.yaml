@@ -243,11 +243,66 @@ components:
       required:
         - ok
         - message
+        - code
+        - codes
+        - dimensions
       properties:
         ok:
           type: boolean
         message:
           type: string
+        code:
+          type: string
+          enum:
+            - normal
+            - sensor_failed
+            - network_unavailable
+            - config_missing
+        codes:
+          type: array
+          items:
+            type: string
+            enum:
+              - normal
+              - sensor_failed
+              - network_unavailable
+              - config_missing
+              - schedule_inactive
+              - control_idle
+        dimensions:
+          type: object
+          required:
+            - sensor
+            - network
+            - config
+            - schedule
+            - control
+          properties:
+            sensor:
+              $ref: '#/components/schemas/StatusDimension'
+            network:
+              $ref: '#/components/schemas/StatusDimension'
+            config:
+              $ref: '#/components/schemas/StatusDimension'
+            schedule:
+              $ref: '#/components/schemas/StatusDimension'
+            control:
+              $ref: '#/components/schemas/StatusDimension'
+          additionalProperties: false
+      additionalProperties: false
+    StatusDimension:
+      type: object
+      required:
+        - code
+        - message
+        - ok
+      properties:
+        code:
+          type: string
+        message:
+          type: string
+        ok:
+          type: boolean
       additionalProperties: false
     ScheduleList:
       type: array
