@@ -46,9 +46,9 @@ frontend:
 	mv fermentbox-backend/files/js/* fermentbox-backend/files
 	mv fermentbox-backend/files/css/* fermentbox-backend/files
 
-	sed -i s#href=/css/#href=/#g fermentbox-backend/files/index.html
-	sed -i s#href=/js/#href=/#g fermentbox-backend/files/index.html
-	sed -i s#src=/js/#src=/#g fermentbox-backend/files/index.html
+	sed -i 's#href="/css/#href="/#g' fermentbox-backend/files/index.html
+	sed -i 's#href="/js/#href="/#g' fermentbox-backend/files/index.html
+	sed -i 's#src="/js/#src="/#g' fermentbox-backend/files/index.html
 
 .PHONY: backend
 backend:

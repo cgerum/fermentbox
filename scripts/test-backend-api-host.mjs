@@ -21,6 +21,7 @@ const tapNetmask = process.env.SMING_HOST_NETMASK || "255.255.255.0";
 const baseUrl = process.env.SMING_HOST_BASE_URL || `http://${hostIp}`;
 const requestTimeoutMs = Number(process.env.API_REQUEST_TIMEOUT_MS || 8000);
 const skipBuild = process.env.SKIP_HOST_BUILD === "1";
+const hostBuildArgs = ["SMING_ARCH=Host", "HWCONFIG=spiffs"];
 
 const scheduleName = `apitest-${Date.now()}`;
 const scheduleBody = JSON.stringify({
@@ -166,10 +167,10 @@ async function main() {
   await killStaleHostApps();
 
   if (!skipBuild) {
-    await run("make", ["-C", "fermentbox-backend", "-j4", "SMING_ARCH=Host"], {
+    await run("make", ["-C", "fermentbox-backend", "-j4", ...hostBuildArgs], {
       cwd: repoDirPath
     });
-    await run("make", ["-C", "fermentbox-backend", "SMING_ARCH=Host", "flash"], {
+    await run("make", ["-C", "fermentbox-backend", ...hostBuildArgs, "flash"], {
       cwd: repoDirPath
     });
   }

@@ -14,6 +14,7 @@ RUN apt-get update \
     python3 \
     python3-pip \
     rsync \
+    socat \
     unzip \
     wget \
     xz-utils \

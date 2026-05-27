@@ -16,8 +16,25 @@ static HttpServer server;
 
 static bool sendFile(const String &fileName, HttpResponse &response) {
   debug_i("File '%s' requested", fileName.c_str());
+  if (response.sendFile(fileName)) {
+    response.code = HTTP_STATUS_OK;
+    return true;
+  }
 
-  return response.sendFile(fileName);
+  // Host frontend packaging flattens js/css assets to root.
+  if (fileName.startsWith("js/") || fileName.startsWith("css/")) {
+    int slashPos = fileName.indexOf('/');
+    if (slashPos >= 0 && slashPos + 1 < fileName.length()) {
+      String flattened = fileName.substring(slashPos + 1);
+      debug_i("Fallback to flattened asset '%s'", flattened.c_str());
+      if (response.sendFile(flattened)) {
+        response.code = HTTP_STATUS_OK;
+        return true;
+      }
+    }
+  }
+
+  return false;
 }
 
 void onIndex(HttpRequest &request, HttpResponse &response) {

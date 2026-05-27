@@ -17,6 +17,10 @@ const hostIp = process.env.SMING_HOST_IP || "192.168.13.2";
 const tapGateway = process.env.SMING_HOST_GATEWAY || "192.168.13.1";
 const tapNetmask = process.env.SMING_HOST_NETMASK || "255.255.255.0";
 const baseUrl = process.env.SMING_HOST_BASE_URL || `http://${hostIp}`;
+const forwardedPort = process.env.SMING_HOST_FORWARD_PORT || "8080";
+const forwardedHost = process.env.SMING_HOST_FORWARD_HOST || "0.0.0.0";
+const forwardedUrl = process.env.SMING_HOST_FORWARD_URL || `http://localhost:${forwardedPort}`;
+const hostBuildArgs = ["SMING_ARCH=Host", "HWCONFIG=spiffs"];
 
 async function run(command, args, options = {}) {
   const child = spawn(command, args, {
@@ -72,11 +76,31 @@ async function openBrowser(url) {
   browser.unref();
 }
 
+function startForwardProxy() {
+  const proxy = spawn("socat", [
+    `TCP-LISTEN:${forwardedPort},reuseaddr,fork,bind=${forwardedHost}`,
+    `TCP:${hostIp}:80`
+  ], {
+    stdio: ["ignore", "pipe", "pipe"]
+  });
+
+  proxy.stdout.on("data", (data) => process.stdout.write(data));
+  proxy.stderr.on("data", (data) => process.stderr.write(data));
+
+  proxy.on("error", (error) => {
+    console.error(`Failed to start socat proxy: ${error.message}`);
+  });
+
+  return proxy;
+}
+
 async function main() {
   await ensureTap();
   await run("make", ["frontend"], { cwd: repoDirPath });
-  await run("make", ["-C", "fermentbox-backend", "-j4", "SMING_ARCH=Host"], { cwd: repoDirPath });
-  await run("make", ["-C", "fermentbox-backend", "SMING_ARCH=Host", "flash"], { cwd: repoDirPath });
+  await run("make", ["-C", "fermentbox-backend", "-j4", ...hostBuildArgs], { cwd: repoDirPath });
+  await run("make", ["-C", "fermentbox-backend", ...hostBuildArgs, "flash"], { cwd: repoDirPath });
+
+  const proxy = startForwardProxy();
 
   const app = spawn(appPathValue, [
     "--ifname", tapIfname,
@@ -104,23 +128,39 @@ async function main() {
     }
   };
 
+  const stopProxy = async () => {
+    if (proxy.exitCode !== null) {
+      return;
+    }
+
+    proxy.kill("SIGTERM");
+    await delay(750);
+    if (proxy.exitCode === null) {
+      proxy.kill("SIGKILL");
+    }
+  };
+
   try {
     await waitForServerReady();
     console.log(`Full app is ready at ${baseUrl}`);
-    await openBrowser(baseUrl);
+    console.log(`Forwarded app is ready at ${forwardedUrl}`);
+    await openBrowser(forwardedUrl);
     console.log("Leave this process running while you inspect the UI. Press Ctrl+C to stop.");
 
     await new Promise(() => {
       process.on("SIGINT", async () => {
+        await stopProxy();
         await stopApp();
         process.exit(0);
       });
       process.on("SIGTERM", async () => {
+        await stopProxy();
         await stopApp();
         process.exit(0);
       });
     });
   } finally {
+    await stopProxy();
     await stopApp();
   }
 }
