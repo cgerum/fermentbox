@@ -293,6 +293,15 @@ Current generation and validation commands (frontend workspace):
 - `yarn api:validate`
 - `yarn api:generate`
 - `yarn api:check`
+- `yarn api:verify-fresh`
+
+Rollout notes:
+
+- Root `Makefile` targets `frontend` and `test-frontend` enforce contract validation and generated artifact freshness checks before build/tests.
+- Frontend CI runs `yarn api:check` and `yarn api:verify-fresh` before lint/test/build.
+- API changes must include updates to both generated files:
+  - `fermentbox-frontend/src/services/api-contract.d.ts`
+  - `fermentbox-frontend/src/services/api-generated.js`
 
 ## 7. Current Architectural Constraints and Gaps
 

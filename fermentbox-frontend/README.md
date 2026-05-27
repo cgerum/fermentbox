@@ -35,5 +35,24 @@ yarn test:watch
 yarn test:coverage
 ```
 
+### API contract workflow
+The API contract source of truth is `../api/fermentbox.openapi.yaml`.
+
+Validate and regenerate API artifacts:
+```
+yarn api:check
+```
+
+Ensure generated API files are committed and in sync:
+```
+yarn api:verify-fresh
+```
+
+When adding or changing endpoints:
+1. Update the OpenAPI file.
+2. Run `yarn api:check`.
+3. Update frontend usage code if needed.
+4. Run tests and commit both source and generated artifacts.
+
 ### Customize configuration
 See [Configuration Reference](https://cli.vuejs.org/config/).
