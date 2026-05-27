@@ -1,5 +1,6 @@
 #include "control_loop.h"
 
+#include "configuration.h"
 #include "nn_controller.h"
 #include "sensors.h"
 
@@ -27,14 +28,45 @@ struct ControlLoopState {
   int humidifier_cooldown;
   int ventilator_cooldown;
 
+  bool heater_on;
+  bool cooler_on;
+  bool ventilator_on;
+  bool humidifier_on;
+
   Timer timer;
 };
 
 static ControlLoopState state;
 
-static bool isOutputActive(uint8_t pin) { return digitalRead(pin) == 0; }
+static bool fakeModeEnabled() { return FermentboxConfig::get().FakeMode; }
+
+static bool &outputStateRef(uint8_t pin) {
+  switch (pin) {
+  case HEATER_PIN:
+    return state.heater_on;
+  case COOLER_PIN:
+    return state.cooler_on;
+  case VENTILATOR_PIN:
+    return state.ventilator_on;
+  case HUMIDIFIER_PIN:
+    return state.humidifier_on;
+  default:
+    return state.heater_on;
+  }
+}
+
+static bool isOutputActive(uint8_t pin) {
+  if (fakeModeEnabled()) {
+    return outputStateRef(pin);
+  }
+  return digitalRead(pin) == 0;
+}
 
 static void setOutputActive(uint8_t pin, bool active) {
+  if (fakeModeEnabled()) {
+    outputStateRef(pin) = active;
+    return;
+  }
   digitalWrite(pin, active ? 0 : 1);
 }
 
@@ -117,34 +149,34 @@ void onControlStep() {
   }
 
   if (!state.humidity_active || measurement.error) {
-    digitalWrite(VENTILATOR_PIN, 1);
-    digitalWrite(HUMIDIFIER_PIN, 1);
+    setOutputActive(VENTILATOR_PIN, false);
+    setOutputActive(HUMIDIFIER_PIN, false);
   } else {
 
     if (measurement.humidity < state.target_humidity * (1.0 - HYSTERESIS_OFF)) {
-      if (digitalRead(VENTILATOR_PIN) == 0) {
-        digitalWrite(VENTILATOR_PIN, 1);
+      if (isOutputActive(VENTILATOR_PIN)) {
+        setOutputActive(VENTILATOR_PIN, false);
         state.humidifier_cooldown = COOLDOWN;
       }
     }
     if (measurement.humidity > state.target_humidity * (1.0 + HYSTERESIS_OFF)) {
-      if (digitalRead(HUMIDIFIER_PIN) == 0) {
-        digitalWrite(HUMIDIFIER_PIN, 1);
+      if (isOutputActive(HUMIDIFIER_PIN)) {
+        setOutputActive(HUMIDIFIER_PIN, false);
         state.ventilator_cooldown = COOLDOWN;
       }
     }
     if ((measurement.humidity >
          state.target_humidity * (1.0f + HYSTERESIS_ON)) &&
         state.ventilator_cooldown <= 0) {
-      if (digitalRead(VENTILATOR_PIN) == 1) {
-        digitalWrite(VENTILATOR_PIN, 0);
+      if (!isOutputActive(VENTILATOR_PIN)) {
+        setOutputActive(VENTILATOR_PIN, true);
       }
     }
     if ((measurement.humidity <
          state.target_humidity * (1.0f - HYSTERESIS_ON)) &&
         state.humidifier_cooldown <= 0) {
-      if (digitalRead(HUMIDIFIER_PIN) == 1) {
-        digitalWrite(HUMIDIFIER_PIN, 0);
+      if (!isOutputActive(HUMIDIFIER_PIN)) {
+        setOutputActive(HUMIDIFIER_PIN, true);
       }
     }
   }
@@ -187,6 +219,10 @@ void startControlLoop() {
   state.cooler_cooldown = 0;
   state.humidifier_cooldown = 0;
   state.ventilator_cooldown = 0;
+  state.heater_on = false;
+  state.cooler_on = false;
+  state.ventilator_on = false;
+  state.humidifier_on = false;
   resetExperimentalTemperatureController();
 
   // Initialize IO
@@ -197,8 +233,8 @@ void startControlLoop() {
 
   setOutputActive(COOLER_PIN, false);
   setOutputActive(HEATER_PIN, false);
-  digitalWrite(VENTILATOR_PIN, 1);
-  digitalWrite(HUMIDIFIER_PIN, 1);
+  setOutputActive(VENTILATOR_PIN, false);
+  setOutputActive(HUMIDIFIER_PIN, false);
 }
 
 ControlStatePublic getControlState() {
@@ -217,4 +253,13 @@ void setControlState(const ControlStatePublic &nextState) {
   state.temperature_active = nextState.temperature_active;
   state.target_humidity = nextState.target_humidity;
   state.humidity_active = nextState.humidity_active;
+}
+
+ActorStatePublic getActorState() {
+  ActorStatePublic res;
+  res.heater_on = isOutputActive(HEATER_PIN);
+  res.cooler_on = isOutputActive(COOLER_PIN);
+  res.ventilator_on = isOutputActive(VENTILATOR_PIN);
+  res.humidifier_on = isOutputActive(HUMIDIFIER_PIN);
+  return res;
 }

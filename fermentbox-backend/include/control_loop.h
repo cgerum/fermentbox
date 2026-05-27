@@ -7,8 +7,16 @@ struct ControlStatePublic {
   bool humidity_active;
 };
 
+struct ActorStatePublic {
+  bool heater_on;
+  bool cooler_on;
+  bool ventilator_on;
+  bool humidifier_on;
+};
+
 void startControlLoop();
 
 ControlStatePublic getControlState();
+ActorStatePublic getActorState();
 
 void setControlState(const ControlStatePublic &nextState);

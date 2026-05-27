@@ -11,7 +11,7 @@ servers:
 paths:
   /networkConfig:
     post:
-      summary: Update wifi credentials
+      summary: Update settings
       operationId: updateNetworkConfig
       requestBody:
         required: true
@@ -195,14 +195,13 @@ components:
       additionalProperties: true
     NetworkConfigRequest:
       type: object
-      required:
-        - SSID
-        - Password
       properties:
         SSID:
           type: string
         Password:
           type: string
+        FakeMode:
+          type: boolean
       additionalProperties: false
     WifiConfig:
       type: object
@@ -219,9 +218,12 @@ components:
       type: object
       required:
         - Wifi
+        - FakeMode
       properties:
         Wifi:
           $ref: '#/components/schemas/WifiConfig'
+        FakeMode:
+          type: boolean
       additionalProperties: false
     Measurement:
       type: object
