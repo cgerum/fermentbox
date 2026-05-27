@@ -58,6 +58,28 @@ jobs:
     steps:
     - uses: actions/checkout@v2
 
+    - name: Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: 22
+
+    - name: Install JavaScript dependencies
+      run: |
+        if [ -f package.json ]; then
+          npm ci
+        fi
+
+        if [ -f fermentbox-frontend/package.json ]; then
+          cd fermentbox-frontend
+          npm install -g yarn@1
+          yarn install --ignore-engines
+          cd ..
+        fi
+
+    - name: Verify host API test script exists
+      run: |
+        test -f scripts/test-backend-api-host.mjs
+
     - name: clone_sming
       run: git clone https://github.com/SmingHub/Sming.git
 
