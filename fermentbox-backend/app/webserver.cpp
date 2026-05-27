@@ -3,6 +3,7 @@
 #include <JsonObjectStream.h>
 
 #include "configuration.h"
+#include "control_loop.h"
 #include "schedule.h"
 #include "sensors.h"
 #include "status.h"
@@ -228,21 +229,100 @@ void onScheduleList(HttpRequest &request, HttpResponse &response) {
 }
 
 void onStatus(HttpRequest &request, HttpResponse &response) {
-  String result;
-  result += "{";
-  result += "\"ok\":";
-  auto status = get_status();
-  if (status == STATUS_NORMAL) {
-    result += "true";
-  } else {
-    result += "false";
+  JsonObjectStream *stream = new JsonObjectStream();
+  JsonObject json = stream->getRoot();
+
+  FermentboxStatus status = get_status();
+  FermentboxConfig &activeConfig = FermentboxConfig::get();
+  bool networkAvailable = WifiStation.isEnabled() || WifiAccessPoint.isEnabled();
+  bool configPresent = activeConfig.Wifi.SSID.length() > 0;
+  bool scheduleActive = isScheduleActive();
+  ControlStatePublic controlState = getControlState();
+  bool controlActive = controlState.temperature_active || controlState.humidity_active;
+
+  if (!networkAvailable) {
+    status = static_cast<FermentboxStatus>(status | STATUS_NETWORK_UNAVAILABLE);
   }
-  result += ", ";
-  result += "\"message\": \"";
-  result += get_status_message();
-  result += "\"}";
-  response.setContentType(MIME_JSON);
-  response.sendString(result);
+  if (!configPresent) {
+    status = static_cast<FermentboxStatus>(status | STATUS_CONFIG_MISSING);
+  }
+  if (!scheduleActive) {
+    status = static_cast<FermentboxStatus>(status | STATUS_SCHEDULE_INACTIVE);
+  }
+  if (!controlActive) {
+    status = static_cast<FermentboxStatus>(status | STATUS_CONTROL_IDLE);
+  }
+
+  FermentboxStatus summaryStatus = static_cast<FermentboxStatus>(
+      status & ~(STATUS_SCHEDULE_INACTIVE | STATUS_CONTROL_IDLE));
+
+  json["ok"] = status_is_ok(summaryStatus);
+  json["message"] = get_status_message(summaryStatus);
+  json["code"] = get_status_code(summaryStatus);
+
+  JsonArray codes = json.createNestedArray("codes");
+  if (status == STATUS_NORMAL) {
+    codes.add("normal");
+  } else {
+    if (status & STATUS_SENSOR_FAILED) {
+      codes.add("sensor_failed");
+    }
+    if (status & STATUS_NETWORK_UNAVAILABLE) {
+      codes.add("network_unavailable");
+    }
+    if (status & STATUS_CONFIG_MISSING) {
+      codes.add("config_missing");
+    }
+    if (status & STATUS_SCHEDULE_INACTIVE) {
+      codes.add("schedule_inactive");
+    }
+    if (status & STATUS_CONTROL_IDLE) {
+      codes.add("control_idle");
+    }
+  }
+
+  JsonObject dimensions = json.createNestedObject("dimensions");
+  auto sensor = dimensions.createNestedObject("sensor");
+  sensor["code"] =
+      (status & STATUS_SENSOR_FAILED) ? "sensor_failed" : "sensor_ok";
+  sensor["message"] =
+      (status & STATUS_SENSOR_FAILED) ? "Temperature/Humidity sensor failed"
+                                      : "Sensor readings are healthy";
+  sensor["ok"] = (status & STATUS_SENSOR_FAILED) == 0;
+
+  auto network = dimensions.createNestedObject("network");
+  network["code"] =
+      (status & STATUS_NETWORK_UNAVAILABLE) ? "network_unavailable"
+                                            : "network_available";
+  network["message"] = (status & STATUS_NETWORK_UNAVAILABLE)
+                           ? "Network connection unavailable"
+                           : "Network is available";
+  network["ok"] = (status & STATUS_NETWORK_UNAVAILABLE) == 0;
+
+  auto config = dimensions.createNestedObject("config");
+  config["code"] = (status & STATUS_CONFIG_MISSING) ? "config_missing"
+                                                     : "config_present";
+  config["message"] = (status & STATUS_CONFIG_MISSING)
+                          ? "Wi-Fi configuration missing"
+                          : "Wi-Fi configuration loaded";
+  config["ok"] = (status & STATUS_CONFIG_MISSING) == 0;
+
+  auto schedule = dimensions.createNestedObject("schedule");
+  schedule["code"] = (status & STATUS_SCHEDULE_INACTIVE) ? "schedule_inactive"
+                                                          : "schedule_active";
+  schedule["message"] = (status & STATUS_SCHEDULE_INACTIVE)
+                            ? "No schedule running"
+                            : "Schedule is running";
+  schedule["ok"] = true;
+
+  auto control = dimensions.createNestedObject("control");
+  control["code"] =
+      (status & STATUS_CONTROL_IDLE) ? "control_idle" : "control_active";
+  control["message"] = (status & STATUS_CONTROL_IDLE) ? "Control loop is idle"
+                                                       : "Control loop active";
+  control["ok"] = true;
+
+  response.sendDataStream(stream, MIME_JSON);
 };
 
 void startWebServer() {
