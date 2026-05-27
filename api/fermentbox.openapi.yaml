@@ -1,0 +1,281 @@
+openapi: 3.0.3
+info:
+  title: Fermentbox API
+  version: 1.0.0
+  description: |
+    Contract for the HTTP endpoints served by the Fermentbox firmware.
+    This specification reflects current runtime behavior and is the source of truth
+    for frontend client generation.
+servers:
+  - url: /
+paths:
+  /networkConfig:
+    post:
+      summary: Update wifi credentials
+      operationId: updateNetworkConfig
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/NetworkConfigRequest'
+      responses:
+        '200':
+          description: Settings updated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/OkResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+  /getConfig:
+    get:
+      summary: Get stored wifi configuration
+      operationId: getConfig
+      responses:
+        '200':
+          description: Current configuration
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GetConfigResponse'
+  /getMeasurement:
+    get:
+      summary: Get latest sensor measurement
+      operationId: getMeasurement
+      responses:
+        '200':
+          description: Latest telemetry sample
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Measurement'
+  /getStatus:
+    get:
+      summary: Get backend health state
+      operationId: getStatus
+      responses:
+        '200':
+          description: Current backend status
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Status'
+  /schedule/list:
+    get:
+      summary: List schedule names
+      operationId: listSchedules
+      responses:
+        '200':
+          description: All stored schedules
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ScheduleList'
+  /schedule/load:
+    get:
+      summary: Load a schedule by name
+      operationId: loadSchedule
+      parameters:
+        - in: query
+          name: name
+          required: true
+          schema:
+            type: string
+            minLength: 1
+      responses:
+        '200':
+          description: Stored schedule payload
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Schedule'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+  /schedule/save:
+    post:
+      summary: Save a schedule by name
+      operationId: saveSchedule
+      parameters:
+        - in: query
+          name: name
+          required: true
+          schema:
+            type: string
+            minLength: 1
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Schedule'
+      responses:
+        '200':
+          description: Schedule saved
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/OkResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+  /schedule/delete:
+    get:
+      summary: Delete a schedule by name
+      operationId: deleteSchedule
+      parameters:
+        - in: query
+          name: name
+          required: true
+          schema:
+            type: string
+            minLength: 1
+      responses:
+        '200':
+          description: Schedule deleted
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/OkResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+  /schedule/start:
+    get:
+      summary: Start a schedule by name
+      operationId: startSchedule
+      parameters:
+        - in: query
+          name: name
+          required: true
+          schema:
+            type: string
+            minLength: 1
+      responses:
+        '200':
+          description: Schedule start requested
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/OkResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+  /schedule/stop:
+    get:
+      summary: Stop currently running schedule
+      operationId: stopSchedule
+      responses:
+        '200':
+          description: Schedule stop requested
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/OkResponse'
+components:
+  responses:
+    BadRequest:
+      description: Invalid request
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+  schemas:
+    OkResponse:
+      type: object
+      required:
+        - res
+      properties:
+        res:
+          type: string
+          enum:
+            - ok
+    ErrorResponse:
+      type: object
+      properties:
+        error:
+          type: string
+      additionalProperties: true
+    NetworkConfigRequest:
+      type: object
+      required:
+        - SSID
+        - Password
+      properties:
+        SSID:
+          type: string
+        Password:
+          type: string
+      additionalProperties: false
+    WifiConfig:
+      type: object
+      required:
+        - SSID
+        - Password
+      properties:
+        SSID:
+          type: string
+        Password:
+          type: string
+      additionalProperties: false
+    GetConfigResponse:
+      type: object
+      required:
+        - Wifi
+      properties:
+        Wifi:
+          $ref: '#/components/schemas/WifiConfig'
+      additionalProperties: false
+    Measurement:
+      type: object
+      required:
+        - date
+        - temperature
+        - humidity
+      properties:
+        date:
+          type: integer
+          format: int64
+        temperature:
+          type: number
+        humidity:
+          type: number
+      additionalProperties: false
+    Status:
+      type: object
+      required:
+        - ok
+        - message
+      properties:
+        ok:
+          type: boolean
+        message:
+          type: string
+      additionalProperties: false
+    ScheduleList:
+      type: array
+      items:
+        type: string
+    Schedule:
+      type: array
+      items:
+        $ref: '#/components/schemas/ScheduleTask'
+    ScheduleTask:
+      type: object
+      required:
+        - duration
+        - temperature_active
+        - humidity_active
+      properties:
+        duration:
+          type: number
+        temperature_active:
+          type: boolean
+        humidity_active:
+          type: boolean
+        temperature_start:
+          type: number
+        temperature_end:
+          type: number
+        humidity_start:
+          type: number
+        humidity_end:
+          type: number
+      additionalProperties: false

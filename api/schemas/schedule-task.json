@@ -1,0 +1,36 @@
+{
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "$id": "https://fermentbox.local/schemas/schedule-task.json",
+    "title": "ScheduleTask",
+    "type": "object",
+    "required": [
+        "duration",
+        "temperature_active",
+        "humidity_active"
+    ],
+    "properties": {
+        "duration": {
+            "type": "number",
+            "minimum": 0
+        },
+        "temperature_active": {
+            "type": "boolean"
+        },
+        "humidity_active": {
+            "type": "boolean"
+        },
+        "temperature_start": {
+            "type": "number"
+        },
+        "temperature_end": {
+            "type": "number"
+        },
+        "humidity_start": {
+            "type": "number"
+        },
+        "humidity_end": {
+            "type": "number"
+        }
+    },
+    "additionalProperties": false
+}
