@@ -2,6 +2,8 @@
 
 import assert from "node:assert/strict";
 import { spawn } from "node:child_process";
+import { mkdir, writeFile } from "node:fs/promises";
+import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { setTimeout as delay } from "node:timers/promises";
 
@@ -25,6 +27,13 @@ const hostReadyTimeoutMs = Number(process.env.HOST_READY_TIMEOUT_MS || 60000);
 const browserNavigationTimeoutMs = Number(process.env.BROWSER_NAVIGATION_TIMEOUT_MS || 90000);
 const browserUiTimeoutMs = Number(process.env.BROWSER_UI_TIMEOUT_MS || 90000);
 const skipBuild = process.env.SKIP_HOST_BUILD === "1";
+
+async function request(pathname, init = {}) {
+    return fetch(`${baseUrl}${pathname}`, {
+        ...init,
+        signal: AbortSignal.timeout(requestTimeoutMs)
+    });
+}
 
 async function run(command, args, options = {}) {
     const child = spawn(command, args, {
@@ -59,6 +68,14 @@ async function run(command, args, options = {}) {
     return { stdout, stderr };
 }
 
+async function killStaleHostApps() {
+    try {
+        await run("pkill", ["-f", "fermentbox-backend/out/Host/debug/firmware/app"]);
+    } catch {
+        // No stale process matched, continue.
+    }
+}
+
 async function ensureTap() {
     try {
         await run("ip", ["link", "show", tapIfname]);
@@ -77,7 +94,7 @@ async function waitForServerReady(timeoutMs = hostReadyTimeoutMs) {
 
     while (Date.now() < deadline) {
         try {
-            const response = await fetch(`${baseUrl}/getStatus`, { signal: AbortSignal.timeout(requestTimeoutMs) });
+            const response = await request("/getStatus");
             if (response.ok) {
                 return;
             }
@@ -91,8 +108,31 @@ async function waitForServerReady(timeoutMs = hostReadyTimeoutMs) {
     throw new Error(`Timed out waiting for backend host endpoint at ${baseUrl}/getStatus`);
 }
 
+function getAssetPathsFromHtml(html) {
+    const references = Array.from(html.matchAll(/(?:src|href)=["']([^"']+)["']/gi), ([, assetPath]) => assetPath);
+    const assets = references
+        .filter((assetPath) => assetPath.startsWith("/") && !assetPath.startsWith("//"))
+        .filter((assetPath) => assetPath.endsWith(".js") || assetPath.endsWith(".css"));
+    return [...new Set(assets)];
+}
+
+async function verifyFrontendAssets() {
+    const response = await request("/");
+    assert.equal(response.ok, true, `Expected 2xx response for /, got ${response.status}`);
+    const html = await response.text();
+
+    const assets = getAssetPathsFromHtml(html);
+    assert.equal(assets.length > 0, true, "Expected index page to reference at least one JS/CSS asset");
+
+    for (const assetPath of assets) {
+        const assetResponse = await request(assetPath);
+        assert.equal(assetResponse.ok, true, `Expected 2xx response for asset ${assetPath}, got ${assetResponse.status}`);
+    }
+}
+
 async function main() {
     await ensureTap();
+    await killStaleHostApps();
 
     if (!skipBuild) {
         await run("make", ["frontend"], { cwd: repoDirPath });
@@ -132,13 +172,36 @@ async function main() {
         }
     };
 
+    let browser;
+    let page;
+    const pageErrors = [];
+    const consoleMessages = [];
+    const failedRequests = [];
+
     try {
         await waitForServerReady();
+        await verifyFrontendAssets();
 
-        const browser = await chromium.launch({ headless: true });
-        const page = await browser.newPage();
+        browser = await chromium.launch({ headless: true });
+        page = await browser.newPage();
         page.setDefaultTimeout(browserUiTimeoutMs);
         page.setDefaultNavigationTimeout(browserNavigationTimeoutMs);
+        page.on("pageerror", (error) => {
+            const message = error instanceof Error ? error.stack || error.message : String(error);
+            pageErrors.push(message);
+            console.error(`[playwright:pageerror] ${message}`);
+        });
+        page.on("console", (message) => {
+            const formatted = `[${message.type()}] ${message.text()}`;
+            consoleMessages.push(formatted);
+            console.log(`[playwright:console] ${formatted}`);
+        });
+        page.on("requestfailed", (request) => {
+            const failure = request.failure();
+            const formatted = `${request.method()} ${request.url()} (${failure?.errorText || "unknown failure"})`;
+            failedRequests.push(formatted);
+            console.error(`[playwright:requestfailed] ${formatted}`);
+        });
 
         await page.goto(baseUrl, { waitUntil: "domcontentloaded", timeout: browserNavigationTimeoutMs });
         await assert.doesNotReject(async () => page.getByText("Ferment Box").waitFor({ state: "visible", timeout: browserUiTimeoutMs }));
@@ -159,9 +222,44 @@ async function main() {
         await page.getByText("Schedule").click();
         await assert.doesNotReject(async () => page.getByText("Schedule").waitFor({ state: "visible", timeout: browserUiTimeoutMs }));
 
-        await browser.close();
         console.log("Browser e2e checks passed.");
+    } catch (error) {
+        if (page) {
+            const artifactDir = "/tmp/fermentbox-browser-e2e-artifacts";
+            const artifactPrefix = `failure-${Date.now()}`;
+            const screenshotPath = path.join(artifactDir, `${artifactPrefix}.png`);
+            const htmlPath = path.join(artifactDir, `${artifactPrefix}.html`);
+
+            await mkdir(artifactDir, { recursive: true });
+            try {
+                await page.screenshot({ path: screenshotPath, fullPage: true });
+                console.error(`Saved failure screenshot: ${screenshotPath}`);
+            } catch (screenshotError) {
+                console.error(`Failed to capture screenshot: ${screenshotError instanceof Error ? screenshotError.message : String(screenshotError)}`);
+            }
+            try {
+                const html = await page.content();
+                await writeFile(htmlPath, html, "utf8");
+                console.error(`Saved failure page HTML: ${htmlPath}`);
+            } catch (htmlError) {
+                console.error(`Failed to capture page HTML: ${htmlError instanceof Error ? htmlError.message : String(htmlError)}`);
+            }
+        }
+
+        if (pageErrors.length > 0) {
+            console.error(`Collected page errors:\n${pageErrors.join("\n")}`);
+        }
+        if (failedRequests.length > 0) {
+            console.error(`Collected failed requests:\n${failedRequests.join("\n")}`);
+        }
+        if (consoleMessages.length > 0) {
+            console.error(`Collected console messages:\n${consoleMessages.join("\n")}`);
+        }
+        throw error;
     } finally {
+        if (browser) {
+            await browser.close();
+        }
         await stopApp();
     }
 }
