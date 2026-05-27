@@ -81,6 +81,8 @@ Files:
 
 - `include/control_loop.h`
 - `app/control_loop.cpp`
+- `include/nn_controller.h`
+- `app/nn_controller.cpp`
 
 Responsibilities:
 
@@ -92,6 +94,8 @@ Responsibilities:
   - humidifier: GPIO2
 - Read latest sensor measurement.
 - Apply hysteresis-based threshold control for temperature and humidity.
+- Optionally route temperature control through an experimental reinforcement
+  learning controller when explicitly enabled at compile time.
 - Enforce cooldown counters to avoid rapid switching conflicts between opposite actuators.
 - Expose simplified public state (`getControlState`) for logger and potential API use.
 
@@ -99,6 +103,15 @@ Current defaults in `startControlLoop()`:
 
 - temperature control enabled, target 28.0 C
 - humidity control disabled, target 50.0%
+
+Temperature controller selection:
+
+- Default builds keep the existing hysteresis controller for temperature.
+- Experimental builds can switch temperature control to the reinforcement
+  learning controller by compiling the backend with
+  `ENABLE_EXPERIMENTAL_RL_CONTROLLER=1`.
+- The reinforcement learning path is intentionally temperature-only for now;
+  humidity continues to use the hysteresis implementation in all builds.
 
 ### 3.5 Status Subsystem
 
@@ -315,11 +328,14 @@ Rollout notes:
 - Settings UI has save buttons not connected to request handlers.
 - API lacks authentication/authorization; Wi-Fi credentials are exposed by `/getConfig`.
 - Status model is minimal (normal vs sensor failed only).
-- `nn_controller.cpp` appears experimental/unintegrated and is not part of runtime wiring.
+- The reinforcement learning temperature controller is now wired behind an
+  explicit compile-time flag and remains experimental until it is tuned with
+  real-world data.
 
 ## 8. Suggested Next Architecture Steps
 
 1. Implement executable schedule state machine tied into control targets.
 2. Add authenticated configuration endpoints and avoid returning plaintext credentials.
 3. Add explicit actuator state API to support richer frontend diagnostics.
-4. Introduce integration tests for endpoint contracts and control-loop edge cases.
+4. Introduce integration tests for endpoint contracts and control-loop edge
+   cases, including dedicated coverage for the experimental RL controller build.
