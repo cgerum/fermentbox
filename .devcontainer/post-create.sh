@@ -37,5 +37,8 @@ if [ -f "${SMING_EXPORT_SCRIPT}" ]; then
   set -u
 fi
 
+cd "${REPO_ROOT}"
+npm install
+
 cd "${REPO_ROOT}/fermentbox-frontend"
 yarn install --frozen-lockfile || yarn install
