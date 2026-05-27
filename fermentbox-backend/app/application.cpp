@@ -39,7 +39,8 @@ void init() {
   Serial.begin(SERIAL_BAUD_RATE); // 115200 by default
   Serial.systemDebugOutput(true);
 
-  // On Host builds timers are not ready during static init, so create NTP client here.
+  // On Host builds timers are not ready during static init, so create NTP
+  // client here.
   if (!ntpClient) {
     ntpClient = std::make_unique<NtpClient>("pool.ntp.org", 3600);
   }

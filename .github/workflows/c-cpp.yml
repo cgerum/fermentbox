@@ -25,3 +25,45 @@ jobs:
         cd fermentbox-backend 
         make -j4 SMING_ARCH=Host
 
+  host-api-tests:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    steps:
+    - uses: actions/checkout@v2
+
+    - name: clone_sming
+      run: git clone https://github.com/SmingHub/Sming.git
+
+    - name: Build Sming
+      run: |
+        sudo Sming/Tools/install.sh host
+        . Sming/Tools/export.sh
+
+    - name: Init Sming submodules
+      run: |
+        cd Sming
+        git submodule update --init --recursive
+
+    - name: Setup tap0 network
+      run: |
+        sudo ip tuntap add dev tap0 mode tap user "$(whoami)"
+        sudo ip address add 192.168.13.1/24 dev tap0
+        sudo ip link set tap0 up
+
+    - name: Run backend host API tests
+      env:
+        SMING_HOST_TAP_IFNAME: tap0
+        SMING_HOST_IP: 192.168.13.2
+        SMING_HOST_GATEWAY: 192.168.13.1
+        SMING_HOST_NETMASK: 255.255.255.0
+      run: |
+        source /home/runner/work/fermentbox/fermentbox/Sming/Sming/../Tools/export.sh
+        make test-backend-api-host
+
+    - name: Cleanup host emulation resources
+      if: always()
+      run: |
+        pkill -f 'fermentbox-backend/out/Host/debug/firmware/app' || true
+        sudo ip link delete tap0 || true
+
