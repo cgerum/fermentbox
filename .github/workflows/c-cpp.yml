@@ -64,8 +64,8 @@ jobs:
       uses: actions/setup-node@v4
       with:
         node-version: 22
-        cache: npm
-        cache-dependency-path: package-lock.json
+        cache: yarn
+        cache-dependency-path: fermentbox-frontend/yarn.lock
 
     - name: Cache Yarn dependencies
       uses: actions/cache@v4
@@ -139,14 +139,14 @@ jobs:
       uses: actions/setup-node@v4
       with:
         node-version: 22
-        cache: npm
-        cache-dependency-path: package-lock.json
+        cache: yarn
+        cache-dependency-path: fermentbox-frontend/yarn.lock
 
     - name: Cache Playwright browsers
       uses: actions/cache@v4
       with:
         path: ~/.cache/ms-playwright
-        key: ${{ runner.os }}-playwright-${{ hashFiles('package-lock.json') }}
+        key: ${{ runner.os }}-playwright-${{ hashFiles('package.json') }}
         restore-keys: |
           ${{ runner.os }}-playwright-
 
