@@ -65,6 +65,10 @@ void onNetworkConfig(HttpRequest &request, HttpResponse &response) {
     WifiStation.config(activeConfig.Wifi.SSID, activeConfig.Wifi.Password);
   }
 
+  if (root.containsKey("FakeMode")) {
+    activeConfig.FakeMode = root["FakeMode"].as<bool>();
+  }
+
   activeConfig.save();
 
   response.setContentType(MIME_JSON);
@@ -81,6 +85,7 @@ void onGetConfig(HttpRequest &request, HttpResponse &response) {
 
   network["SSID"] = activeConfig.Wifi.SSID;
   network["Password"] = activeConfig.Wifi.Password;
+  json["FakeMode"] = activeConfig.FakeMode;
 
   response.sendDataStream(stream, MIME_JSON);
 }

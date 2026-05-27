@@ -20,13 +20,15 @@ describe("Settings", () => {
             Wifi: {
                 SSID: "TestWifi",
                 Password: "secret"
-            }
+            },
+            FakeMode: true
         });
 
         const vm = {
             appPassword: null,
             wifiSSID: null,
-            wifiPassword: null
+            wifiPassword: null,
+            fakeMode: false
         };
 
         Settings.methods.getConfig.call(vm);
@@ -36,6 +38,7 @@ describe("Settings", () => {
         expect(vm.appPassword).toBe("secret");
         expect(vm.wifiSSID).toBe("TestWifi");
         expect(vm.wifiPassword).toBe("secret");
+        expect(vm.fakeMode).toBe(true);
     });
 
     it("storeWifiConfig validates required fields", async () => {
@@ -94,6 +97,28 @@ describe("Settings", () => {
         expect(vm.appSaveSuccess).toBe("");
         expect(vm.appSaveError).toBe("Unable to save password. Please try again.");
         expect(vm.isSavingAppPassword).toBe(false);
+    });
+
+    it("storeFakeMode saves and refreshes values", async () => {
+        apiService.updateNetworkConfig.mockResolvedValue({ res: "ok" });
+
+        const vm = {
+            fakeMode: true,
+            fakeModeSaveSuccess: "",
+            fakeModeSaveError: "",
+            isSavingFakeMode: false,
+            getConfig: jest.fn(() => Promise.resolve())
+        };
+
+        await Settings.methods.storeFakeMode.call(vm);
+
+        expect(apiService.updateNetworkConfig).toHaveBeenCalledWith({
+            FakeMode: true
+        });
+        expect(vm.getConfig).toHaveBeenCalledTimes(1);
+        expect(vm.fakeModeSaveSuccess).toBe("Simulation mode saved.");
+        expect(vm.fakeModeSaveError).toBe("");
+        expect(vm.isSavingFakeMode).toBe(false);
     });
 
     it("created hook fetches config", () => {

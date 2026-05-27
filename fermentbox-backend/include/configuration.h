@@ -18,6 +18,7 @@ public:
   };
 
   WifiConfig Wifi;
+  bool FakeMode = false;
 
   static FermentboxConfig &load();
   static FermentboxConfig &get();

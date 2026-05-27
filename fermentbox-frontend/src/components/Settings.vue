@@ -85,6 +85,43 @@
         </v-card>
       </v-list-item-content>
     </v-list-item>
+    <v-list-item>
+      <v-list-item-content>
+        <v-card outlined>
+          <v-card-title>
+            <v-icon color="secondary">mdi-flask-outline</v-icon>
+            <span class="card-title">Simulation</span>
+          </v-card-title>
+          <v-card-text>
+            <v-switch
+              v-model="fakeMode"
+              label="Enable fake sensors and actors"
+              inset
+            ></v-switch>
+          </v-card-text>
+          <v-card-actions>
+            <v-spacer></v-spacer>
+            <v-btn
+              depressed
+              color="accent"
+              :loading="isSavingFakeMode"
+              @click="storeFakeMode"
+              >Save Simulation Mode</v-btn
+            >
+          </v-card-actions>
+          <v-card-text v-if="fakeModeSaveSuccess || fakeModeSaveError">
+            <v-alert
+              dense
+              outlined
+              :type="fakeModeSaveError ? 'error' : 'success'"
+              class="mb-0"
+            >
+              {{ fakeModeSaveError || fakeModeSaveSuccess }}
+            </v-alert>
+          </v-card-text>
+        </v-card>
+      </v-list-item-content>
+    </v-list-item>
   </v-list>
 </template>
 
@@ -119,6 +156,10 @@ export default {
     isSavingWifiConfig: false,
     wifiSaveSuccess: "",
     wifiSaveError: "",
+    fakeMode: false,
+    isSavingFakeMode: false,
+    fakeModeSaveSuccess: "",
+    fakeModeSaveError: "",
   }),
   created: function () {
     this.getConfig();
@@ -177,11 +218,30 @@ export default {
           this.isSavingWifiConfig = false;
         });
     },
+    storeFakeMode: function () {
+      this.fakeModeSaveSuccess = "";
+      this.fakeModeSaveError = "";
+      this.isSavingFakeMode = true;
+
+      return apiService
+        .updateNetworkConfig({ FakeMode: !!this.fakeMode })
+        .then(() => this.getConfig())
+        .then(() => {
+          this.fakeModeSaveSuccess = "Simulation mode saved.";
+        })
+        .catch(() => {
+          this.fakeModeSaveError = "Unable to save simulation mode.";
+        })
+        .finally(() => {
+          this.isSavingFakeMode = false;
+        });
+    },
     getConfig: function () {
       return apiService.getConfig().then((data) => {
         this.wifiSSID = data.Wifi.SSID;
         this.wifiPassword = data.Wifi.Password;
         this.appPassword = data.Wifi.Password;
+        this.fakeMode = !!data.FakeMode;
       });
     },
   },
