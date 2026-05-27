@@ -1,0 +1,32 @@
+{
+    "name": "Fermentbox Dev",
+    "build": {
+        "dockerfile": "Dockerfile",
+        "context": ".."
+    },
+    "containerEnv": {
+        "SMING_HOME": "/opt/Sming/Sming",
+        "SMING_TOOLCHAINS": "/home/node/.sming/toolchains"
+    },
+    "forwardPorts": [
+        8080
+    ],
+    "postCreateCommand": "bash .devcontainer/post-create.sh",
+    "customizations": {
+        "vscode": {
+            "extensions": [
+                "ms-vscode.cpptools",
+                "ms-vscode.makefile-tools",
+                "ms-python.python",
+                "octref.vetur",
+                "dbaeumer.vscode-eslint"
+            ],
+            "settings": {
+                "terminal.integrated.defaultProfile.linux": "bash",
+                "files.associations": {
+                    "*.mk": "makefile"
+                }
+            }
+        }
+    }
+}
