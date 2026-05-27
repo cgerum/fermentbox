@@ -1,0 +1,12 @@
+{
+  "name": "fermentbox-root",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "test:backend-browser": "node scripts/test-backend-browser-e2e.mjs",
+    "start:full-app-host": "node scripts/start-full-app-host.mjs"
+  },
+  "devDependencies": {
+    "playwright": "^1.54.2"
+  }
+}

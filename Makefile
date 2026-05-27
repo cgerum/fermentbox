@@ -17,6 +17,14 @@ test-frontend:
 test-backend-api-host:
 	node scripts/test-backend-api-host.mjs
 
+.PHONY: test-backend-browser-e2e
+test-backend-browser-e2e:
+	node scripts/test-backend-browser-e2e.mjs
+
+.PHONY: start-full-app-host
+start-full-app-host:
+	node scripts/start-full-app-host.mjs
+
 .PHONY: frontend
 frontend:
 	cd fermentbox-frontend && yarn install --ignore-engines

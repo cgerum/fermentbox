@@ -1,7 +1,7 @@
 <template>
   <v-app>
     <v-app-bar app color="primary" dark>
-      <v-btn icon @click="drawer = !drawer">
+      <v-btn icon data-testid="nav-drawer-toggle" @click="drawer = !drawer">
         <v-app-bar-nav-icon></v-app-bar-nav-icon>
       </v-btn>
       <div class="d-flex align-center">

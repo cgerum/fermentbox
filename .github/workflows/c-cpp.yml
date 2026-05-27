@@ -66,7 +66,7 @@ jobs:
     - name: Install JavaScript dependencies
       run: |
         if [ -f package.json ]; then
-          npm ci
+          npm install
         fi
 
         if [ -f fermentbox-frontend/package.json ]; then
@@ -110,6 +110,62 @@ jobs:
         make test-backend-api-host
 
     - name: Cleanup host emulation resources
+      if: always()
+      run: |
+        pkill -f 'fermentbox-backend/out/Host/debug/firmware/app' || true
+        sudo ip link delete tap0 || true
+
+  host-browser-e2e:
+    needs: host-api-tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+
+    steps:
+    - uses: actions/checkout@v2
+
+    - name: Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: 22
+
+    - name: Install JavaScript dependencies
+      run: |
+        npm install
+
+    - name: Install Playwright browsers
+      run: |
+        npx playwright install --with-deps chromium
+
+    - name: clone_sming
+      run: git clone https://github.com/SmingHub/Sming.git
+
+    - name: Build Sming
+      run: |
+        sudo Sming/Tools/install.sh host
+        . Sming/Tools/export.sh
+
+    - name: Init Sming submodules
+      run: |
+        cd Sming
+        git submodule update --init --recursive
+
+    - name: Setup tap0 network
+      run: |
+        sudo ip tuntap add dev tap0 mode tap user "$(whoami)"
+        sudo ip address add 192.168.13.1/24 dev tap0
+        sudo ip link set tap0 up
+
+    - name: Run browser e2e tests
+      env:
+        SMING_HOST_TAP_IFNAME: tap0
+        SMING_HOST_IP: 192.168.13.2
+        SMING_HOST_GATEWAY: 192.168.13.1
+        SMING_HOST_NETMASK: 255.255.255.0
+      run: |
+        source /home/runner/work/fermentbox/fermentbox/Sming/Sming/../Tools/export.sh
+        make test-backend-browser-e2e
+
+    - name: Cleanup browser e2e resources
       if: always()
       run: |
         pkill -f 'fermentbox-backend/out/Host/debug/firmware/app' || true

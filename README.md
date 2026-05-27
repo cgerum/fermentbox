@@ -22,6 +22,22 @@ Requirements:
 
 These are configured by `.devcontainer/devcontainer.json` (`NET_ADMIN` + `/dev/net/tun`) and `.devcontainer/post-start.sh`.
 
+## Backend Browser Tests
+
+Run the host-backed browser end-to-end checks:
+
+```bash
+make test-backend-browser-e2e
+```
+
+Start the full host app for manual inspection in a browser:
+
+```bash
+make start-full-app-host
+```
+
+The browser test uses Playwright from the repository root `package.json`, so install the root JS dependencies first when running locally.
+
 
 ## Notes
 
