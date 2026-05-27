@@ -10,3 +10,5 @@ inline String getScheduleFileName(String &name) {
 bool startSchedule(String &name, String *errorMessage = nullptr);
 
 void stopSchedule();
+
+bool isScheduleActive();

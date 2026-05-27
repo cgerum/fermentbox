@@ -1,5 +1,6 @@
 #include "control_loop.h"
 
+#include "nn_controller.h"
 #include "sensors.h"
 
 #include <SmingCore.h>
@@ -31,44 +32,88 @@ struct ControlLoopState {
 
 static ControlLoopState state;
 
+static bool isOutputActive(uint8_t pin) { return digitalRead(pin) == 0; }
+
+static void setOutputActive(uint8_t pin, bool active) {
+  digitalWrite(pin, active ? 0 : 1);
+}
+
+static void setTemperatureOutputs(bool heater_on, bool cooler_on) {
+  const bool heater_was_on = isOutputActive(HEATER_PIN);
+  const bool cooler_was_on = isOutputActive(COOLER_PIN);
+
+  if (heater_was_on != heater_on) {
+    setOutputActive(HEATER_PIN, heater_on);
+    if (!heater_on) {
+      state.cooler_cooldown = COOLDOWN;
+    }
+  }
+  if (cooler_was_on != cooler_on) {
+    setOutputActive(COOLER_PIN, cooler_on);
+    if (!cooler_on) {
+      state.heater_cooldown = COOLDOWN;
+    }
+  }
+}
+
+static void applyThresholdTemperatureControl(
+    const Sensors::Measurement &measurement) {
+  bool heater_on = isOutputActive(HEATER_PIN);
+  bool cooler_on = isOutputActive(COOLER_PIN);
+
+  if (!state.temperature_active || measurement.error) {
+    setTemperatureOutputs(false, false);
+    return;
+  }
+
+  if (measurement.temperature > state.target_temperature * (1.0f - HYSTERESIS_OFF)) {
+    heater_on = false;
+  }
+  if (measurement.temperature < state.target_temperature * (1.0f + HYSTERESIS_OFF)) {
+    cooler_on = false;
+  }
+  if ((measurement.temperature > state.target_temperature * (1.0f + HYSTERESIS_ON)) &&
+      state.cooler_cooldown <= 0) {
+    cooler_on = true;
+  }
+  if ((measurement.temperature < state.target_temperature * (1.0f - HYSTERESIS_ON)) &&
+      state.heater_cooldown <= 0) {
+    heater_on = true;
+  }
+
+  setTemperatureOutputs(heater_on, cooler_on);
+}
+
+static void applyExperimentalTemperatureControl(
+    const Sensors::Measurement &measurement) {
+  TemperatureControllerInput input;
+  input.temperature_active = state.temperature_active;
+  input.target_temperature = state.target_temperature;
+  input.current_temperature = measurement.temperature;
+  input.measurement_error = measurement.error;
+  input.heater_on = isOutputActive(HEATER_PIN);
+  input.cooler_on = isOutputActive(COOLER_PIN);
+  input.heater_cooldown = state.heater_cooldown;
+  input.cooler_cooldown = state.cooler_cooldown;
+
+  TemperatureControllerOutput output = {false, false};
+  if (runExperimentalTemperatureController(input, output)) {
+    setTemperatureOutputs(output.heater_on, output.cooler_on);
+    return;
+  }
+
+  applyThresholdTemperatureControl(measurement);
+}
+
 void onControlStep() {
 
   Sensors &sensors = getSensors();
   Sensors::Measurement &measurement = sensors.getLastMeasurement();
 
-  if (!state.temperature_active || measurement.error) {
-    digitalWrite(HEATER_PIN, 1);
-    digitalWrite(COOLER_PIN, 1);
+  if (experimentalTemperatureControllerEnabled()) {
+    applyExperimentalTemperatureControl(measurement);
   } else {
-    if (measurement.temperature >
-        state.target_temperature * (1.0f - HYSTERESIS_OFF)) {
-      if (digitalRead(HEATER_PIN) == 0) {
-        digitalWrite(HEATER_PIN, 1);
-        state.cooler_cooldown = COOLDOWN;
-      }
-    }
-    if (measurement.temperature <
-        state.target_temperature * (1.0 + HYSTERESIS_OFF)) {
-      if (digitalRead(COOLER_PIN) == 0) {
-        digitalWrite(COOLER_PIN, 1);
-        state.heater_cooldown = COOLDOWN;
-      }
-    }
-    if ((measurement.temperature >
-         state.target_temperature * (1.0f + HYSTERESIS_ON)) &&
-        state.cooler_cooldown <= 0) {
-      if (digitalRead(COOLER_PIN) == 1) {
-        digitalWrite(COOLER_PIN, 0);
-      }
-    }
-
-    if ((measurement.temperature <
-         state.target_temperature * (1.0f - HYSTERESIS_ON)) &&
-        state.heater_cooldown <= 0) {
-      if (digitalRead(HEATER_PIN) == 1) {
-        digitalWrite(HEATER_PIN, 0);
-      }
-    }
+    applyThresholdTemperatureControl(measurement);
   }
 
   if (!state.humidity_active || measurement.error) {
@@ -138,6 +183,11 @@ void startControlLoop() {
   state.humidity_active = false;
   state.target_temperature = 28.0f;
   state.target_humidity = 50.0f;
+  state.heater_cooldown = 0;
+  state.cooler_cooldown = 0;
+  state.humidifier_cooldown = 0;
+  state.ventilator_cooldown = 0;
+  resetExperimentalTemperatureController();
 
   // Initialize IO
   pinMode(COOLER_PIN, OUTPUT);
@@ -145,8 +195,8 @@ void startControlLoop() {
   pinMode(VENTILATOR_PIN, OUTPUT);
   pinMode(HUMIDIFIER_PIN, OUTPUT);
 
-  digitalWrite(COOLER_PIN, 1);
-  digitalWrite(HEATER_PIN, 1);
+  setOutputActive(COOLER_PIN, false);
+  setOutputActive(HEATER_PIN, false);
   digitalWrite(VENTILATOR_PIN, 1);
   digitalWrite(HUMIDIFIER_PIN, 1);
 }

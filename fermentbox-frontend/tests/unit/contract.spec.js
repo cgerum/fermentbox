@@ -40,11 +40,73 @@ describe("API contract fixtures", () => {
 
         const statusSchema = {
             type: "object",
-            required: ["ok", "message"],
+            required: ["ok", "message", "code", "codes", "dimensions"],
             additionalProperties: false,
             properties: {
                 ok: { type: "boolean" },
-                message: { type: "string" }
+                message: { type: "string" },
+                code: { type: "string" },
+                codes: {
+                    type: "array",
+                    items: { type: "string" }
+                },
+                dimensions: {
+                    type: "object",
+                    required: ["sensor", "network", "config", "schedule", "control"],
+                    additionalProperties: false,
+                    properties: {
+                        sensor: {
+                            type: "object",
+                            required: ["code", "message", "ok"],
+                            additionalProperties: false,
+                            properties: {
+                                code: { type: "string" },
+                                message: { type: "string" },
+                                ok: { type: "boolean" }
+                            }
+                        },
+                        network: {
+                            type: "object",
+                            required: ["code", "message", "ok"],
+                            additionalProperties: false,
+                            properties: {
+                                code: { type: "string" },
+                                message: { type: "string" },
+                                ok: { type: "boolean" }
+                            }
+                        },
+                        config: {
+                            type: "object",
+                            required: ["code", "message", "ok"],
+                            additionalProperties: false,
+                            properties: {
+                                code: { type: "string" },
+                                message: { type: "string" },
+                                ok: { type: "boolean" }
+                            }
+                        },
+                        schedule: {
+                            type: "object",
+                            required: ["code", "message", "ok"],
+                            additionalProperties: false,
+                            properties: {
+                                code: { type: "string" },
+                                message: { type: "string" },
+                                ok: { type: "boolean" }
+                            }
+                        },
+                        control: {
+                            type: "object",
+                            required: ["code", "message", "ok"],
+                            additionalProperties: false,
+                            properties: {
+                                code: { type: "string" },
+                                message: { type: "string" },
+                                ok: { type: "boolean" }
+                            }
+                        }
+                    }
+                }
             }
         };
 
@@ -54,6 +116,20 @@ describe("API contract fixtures", () => {
         expect(
             validateMeasurement({ date: 1711000000, temperature: 22.3, humidity: 55.2 })
         ).toBe(true);
-        expect(validateStatus({ ok: true, message: "No errors" })).toBe(true);
+        expect(
+            validateStatus({
+                ok: true,
+                message: "No errors",
+                code: "normal",
+                codes: ["normal"],
+                dimensions: {
+                    sensor: { code: "sensor_ok", message: "Sensor readings are healthy", ok: true },
+                    network: { code: "network_available", message: "Network is available", ok: true },
+                    config: { code: "config_present", message: "Wi-Fi configuration loaded", ok: true },
+                    schedule: { code: "schedule_inactive", message: "No schedule running", ok: true },
+                    control: { code: "control_active", message: "Control loop active", ok: true }
+                }
+            })
+        ).toBe(true);
     });
 });
