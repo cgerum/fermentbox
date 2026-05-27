@@ -26,6 +26,7 @@ jobs:
         make -j4 SMING_ARCH=Host
 
   host-api-tests:
+    needs: build
     runs-on: ubuntu-latest
     timeout-minutes: 30
 
