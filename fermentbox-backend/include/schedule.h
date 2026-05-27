@@ -7,6 +7,6 @@ inline String getScheduleFileName(String &name) {
   return filename;
 }
 
-void startSchedule(String &name);
+bool startSchedule(String &name, String *errorMessage = nullptr);
 
 void stopSchedule();

@@ -10,3 +10,5 @@ struct ControlStatePublic {
 void startControlLoop();
 
 ControlStatePublic getControlState();
+
+void setControlState(const ControlStatePublic &nextState);

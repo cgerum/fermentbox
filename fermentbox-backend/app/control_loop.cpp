@@ -161,3 +161,10 @@ ControlStatePublic getControlState() {
 
   return res;
 }
+
+void setControlState(const ControlStatePublic &nextState) {
+  state.target_temperature = nextState.target_temperature;
+  state.temperature_active = nextState.temperature_active;
+  state.target_humidity = nextState.target_humidity;
+  state.humidity_active = nextState.humidity_active;
+}
