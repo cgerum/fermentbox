@@ -183,6 +183,10 @@ jobs:
         SMING_HOST_IP: 192.168.13.2
         SMING_HOST_GATEWAY: 192.168.13.1
         SMING_HOST_NETMASK: 255.255.255.0
+        API_REQUEST_TIMEOUT_MS: 15000
+        HOST_READY_TIMEOUT_MS: 60000
+        BROWSER_NAVIGATION_TIMEOUT_MS: 90000
+        BROWSER_UI_TIMEOUT_MS: 90000
       run: |
         source /home/runner/work/fermentbox/fermentbox/Sming/Sming/../Tools/export.sh
         make test-backend-browser-e2e

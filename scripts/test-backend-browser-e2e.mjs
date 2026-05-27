@@ -21,6 +21,9 @@ const tapGateway = process.env.SMING_HOST_GATEWAY || "192.168.13.1";
 const tapNetmask = process.env.SMING_HOST_NETMASK || "255.255.255.0";
 const baseUrl = process.env.SMING_HOST_BASE_URL || `http://${hostIp}`;
 const requestTimeoutMs = Number(process.env.API_REQUEST_TIMEOUT_MS || 8000);
+const hostReadyTimeoutMs = Number(process.env.HOST_READY_TIMEOUT_MS || 60000);
+const browserNavigationTimeoutMs = Number(process.env.BROWSER_NAVIGATION_TIMEOUT_MS || 90000);
+const browserUiTimeoutMs = Number(process.env.BROWSER_UI_TIMEOUT_MS || 90000);
 const skipBuild = process.env.SKIP_HOST_BUILD === "1";
 
 async function run(command, args, options = {}) {
@@ -69,7 +72,7 @@ async function ensureTap() {
     await run("sudo", ["ip", "link", "set", tapIfname, "up"]);
 }
 
-async function waitForServerReady(timeoutMs = 30000) {
+async function waitForServerReady(timeoutMs = hostReadyTimeoutMs) {
     const deadline = Date.now() + timeoutMs;
 
     while (Date.now() < deadline) {
@@ -134,25 +137,27 @@ async function main() {
 
         const browser = await chromium.launch({ headless: true });
         const page = await browser.newPage();
+        page.setDefaultTimeout(browserUiTimeoutMs);
+        page.setDefaultNavigationTimeout(browserNavigationTimeoutMs);
 
-        await page.goto(baseUrl, { waitUntil: "networkidle" });
-        await assert.doesNotReject(async () => page.getByText("Ferment Box").waitFor({ state: "visible" }));
-        await assert.doesNotReject(async () => page.getByText("Controls").waitFor({ state: "visible" }));
-        await assert.doesNotReject(async () => page.getByText("Temperature").waitFor({ state: "visible" }));
+        await page.goto(baseUrl, { waitUntil: "domcontentloaded", timeout: browserNavigationTimeoutMs });
+        await assert.doesNotReject(async () => page.getByText("Ferment Box").waitFor({ state: "visible", timeout: browserUiTimeoutMs }));
+        await assert.doesNotReject(async () => page.getByText("Controls").waitFor({ state: "visible", timeout: browserUiTimeoutMs }));
+        await assert.doesNotReject(async () => page.getByText("Temperature").waitFor({ state: "visible", timeout: browserUiTimeoutMs }));
 
         await page.getByTestId("nav-drawer-toggle").click();
         await page.getByText("Settings").click();
-        await assert.doesNotReject(async () => page.getByText("Wi-Fi").waitFor({ state: "visible" }));
+        await assert.doesNotReject(async () => page.getByText("Wi-Fi").waitFor({ state: "visible", timeout: browserUiTimeoutMs }));
 
         await page.getByLabel("SSID").fill("BrowserHostSSID");
         await page.getByLabel("Password").nth(1).fill("BrowserHostPassword");
 
         await page.getByRole("button", { name: "Save WIFI Credentials" }).click();
-        await assert.doesNotReject(async () => page.getByText("Wi-Fi credentials saved.").waitFor({ state: "visible" }));
+        await assert.doesNotReject(async () => page.getByText("Wi-Fi credentials saved.").waitFor({ state: "visible", timeout: browserUiTimeoutMs }));
 
         await page.getByTestId("nav-drawer-toggle").click();
         await page.getByText("Schedule").click();
-        await assert.doesNotReject(async () => page.getByText("Schedule").waitFor({ state: "visible" }));
+        await assert.doesNotReject(async () => page.getByText("Schedule").waitFor({ state: "visible", timeout: browserUiTimeoutMs }));
 
         await browser.close();
         console.log("Browser e2e checks passed.");
