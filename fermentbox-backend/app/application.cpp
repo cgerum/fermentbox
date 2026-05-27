@@ -7,7 +7,7 @@
 #include "sensors.h"
 #include "webserver.h"
 
-NtpClient ntpClient("pool.ntp.org", 3600);
+std::unique_ptr<NtpClient> ntpClient;
 
 static void WifiDisconnect(const String &ssid, MacAddress bssid,
                            WifiDisconnectReason reason) {
@@ -38,6 +38,11 @@ static void WifiGotIP(IpAddress ip, IpAddress mask, IpAddress gateway) {
 void init() {
   Serial.begin(SERIAL_BAUD_RATE); // 115200 by default
   Serial.systemDebugOutput(true);
+
+  // On Host builds timers are not ready during static init, so create NTP client here.
+  if (!ntpClient) {
+    ntpClient = std::make_unique<NtpClient>("pool.ntp.org", 3600);
+  }
 
   spiffs_mount(); // Mount file system, in order to work with files
 

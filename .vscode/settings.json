@@ -1,5 +1,11 @@
 {
     "C_Cpp.clang_format_fallbackStyle": "LLVM",
     "editor.formatOnSave": true,
-    "python.pythonPath": "/home/christoph/.pyenv/versions/3.6.9/bin/python"
+    "python.pythonPath": "/home/christoph/.pyenv/versions/3.6.9/bin/python",
+    "chat.tools.terminal.autoApprove": {
+        "/^cd /workspaces/fermentbox && node --check scripts/test-backend-api-host\\.mjs$/": {
+            "approve": true,
+            "matchCommandLine": true
+        }
+    }
 }

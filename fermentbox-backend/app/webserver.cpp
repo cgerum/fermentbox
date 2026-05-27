@@ -32,9 +32,14 @@ void onNetworkConfig(HttpRequest &request, HttpResponse &response) {
   }
 
   debugf("Update config");
-  // Update config
-  if (request.getBody() == nullptr) {
-    debugf("NULL bodyBuf");
+  String body = request.getBody();
+  if (!body) {
+    debug_w("NULL bodyBuf");
+    return;
+  }
+
+  if (body.length() == 0) {
+    debug_w("Empty request body");
     return;
   }
 
@@ -42,7 +47,7 @@ void onNetworkConfig(HttpRequest &request, HttpResponse &response) {
 
   StaticJsonDocument<ConfigJsonBufferSize> root;
 
-  if (!Json::deserialize(root, request.getBodyStream())) {
+  if (!Json::deserialize(root, body)) {
     debug_w("Invalid JSON to un-serialize");
     return;
   }
@@ -119,8 +124,8 @@ void onScheduleSave(HttpRequest &request, HttpResponse &response) {
   }
 
   debugf("Save schedule");
-  // Update config
-  if (request.getBody() == nullptr) {
+  String body = request.getBody();
+  if (!body) {
     debugf("NULL bodyBuf");
     return;
   }
@@ -133,15 +138,19 @@ void onScheduleSave(HttpRequest &request, HttpResponse &response) {
   }
   FileStream stream(filename, IFS::OpenFlag::Write | IFS::OpenFlag::Create |
                                   IFS::OpenFlag::Truncate);
-
-  String body = request.getBody();
+  if (!stream.isValid()) {
+    debugf("Unable to open schedule file");
+    response.code = HTTP_STATUS_INTERNAL_SERVER_ERROR;
+    return;
+  }
 
   debugf("Result: %s", body.c_str());
 
   auto pos = body.begin();
   while (pos != body.end()) {
     int count = stream.write((uint8_t *)pos, body.end() - pos);
-    if (count < 0) {
+    if (count <= 0) {
+      response.code = HTTP_STATUS_INTERNAL_SERVER_ERROR;
       return;
     }
 

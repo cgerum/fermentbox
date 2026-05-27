@@ -1,5 +1,27 @@
 
 
+## Backend Host API Tests
+
+Run the backend endpoint integration tests against the Sming Host binary:
+
+```bash
+make test-backend-api-host
+```
+
+The test command will:
+
+1. Build `fermentbox-backend` for `SMING_ARCH=Host`
+2. Flash the host virtual flash image
+3. Start `out/Host/debug/firmware/app` with Sming TAP network emulation
+4. Execute HTTP checks for `/getConfig`, `/getMeasurement`, `/getStatus`, `/networkConfig`, and `/schedule/*`
+
+Requirements:
+
+- A TAP interface (`tap0` by default) with `192.168.13.1/24`
+- `/dev/net/tun` available in the devcontainer
+
+These are configured by `.devcontainer/devcontainer.json` (`NET_ADMIN` + `/dev/net/tun`) and `.devcontainer/post-start.sh`.
+
 
 ## Notes
 

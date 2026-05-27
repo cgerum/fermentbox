@@ -13,6 +13,10 @@ test-frontend:
 	cd fermentbox-frontend && yarn api:verify-fresh
 	cd fermentbox-frontend && yarn test
 
+.PHONY: test-backend-api-host
+test-backend-api-host:
+	node scripts/test-backend-api-host.mjs
+
 .PHONY: frontend
 frontend:
 	cd fermentbox-frontend && yarn install --ignore-engines
