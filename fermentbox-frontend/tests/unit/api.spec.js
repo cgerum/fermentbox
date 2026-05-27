@@ -12,10 +12,12 @@ describe("apiService contract wiring", () => {
         await apiService.getMeasurement();
         await apiService.getStatus();
         await apiService.getConfig();
+        await apiService.updateNetworkConfig({ SSID: "wifi", Password: "secret" });
 
         expect(sendRequest).toHaveBeenNthCalledWith(1, "getMeasurement", {}, "");
         expect(sendRequest).toHaveBeenNthCalledWith(2, "getStatus", {}, "");
         expect(sendRequest).toHaveBeenNthCalledWith(3, "getConfig", {}, "");
+        expect(sendRequest).toHaveBeenNthCalledWith(4, "networkConfig", {}, "{\"SSID\":\"wifi\",\"Password\":\"secret\"}");
     });
 
     it("maps schedule endpoints with expected query and body", async () => {

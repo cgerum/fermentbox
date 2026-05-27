@@ -26,6 +26,12 @@ const apiService = {
         return callOperation("getConfig");
     },
 
+    updateNetworkConfig(config) {
+        return callOperation("updateNetworkConfig", {
+            body: JSON.stringify(config || {})
+        });
+    },
+
     schedule: {
         list() {
             return callOperation("listSchedules");
