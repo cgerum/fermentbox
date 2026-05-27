@@ -13,7 +13,7 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /** Update wifi credentials */
+        /** Update settings */
         post: operations["updateNetworkConfig"];
         delete?: never;
         options?: never;
@@ -188,8 +188,9 @@ export interface components {
             [key: string]: unknown;
         };
         NetworkConfigRequest: {
-            SSID: string;
-            Password: string;
+            SSID?: string;
+            Password?: string;
+            FakeMode?: boolean;
         };
         WifiConfig: {
             SSID: string;
@@ -197,6 +198,7 @@ export interface components {
         };
         GetConfigResponse: {
             Wifi: components["schemas"]["WifiConfig"];
+            FakeMode: boolean;
         };
         Measurement: {
             /** Format: int64 */
