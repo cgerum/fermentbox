@@ -25,6 +25,31 @@ jobs:
         cd fermentbox-backend 
         make -j4 SMING_ARCH=Host
 
+  esp8266-build:
+    runs-on: ubuntu-latest
+
+    steps:
+    - uses: actions/checkout@v2
+
+    - name: clone_sming
+      run: git clone https://github.com/SmingHub/Sming.git
+
+    - name: Build Sming
+      run: |
+        sudo Sming/Tools/install.sh esp8266
+        . Sming/Tools/export.sh
+
+    - name: Init Sming submodules
+      run: |
+        cd Sming
+        git submodule update --init --recursive
+
+    - name: Build backend for Esp8266
+      run: |
+        source /home/runner/work/fermentbox/fermentbox/Sming/Sming/../Tools/export.sh
+        cd fermentbox-backend
+        make -j4 SMING_ARCH=Esp8266
+
   host-api-tests:
     needs: build
     runs-on: ubuntu-latest
