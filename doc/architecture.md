@@ -278,6 +278,22 @@ Backend project uses Sming (`project.mk`) and Arduino libraries:
 - `ArduinoJson6`
 - `DHTesp`
 
+## 7. API Contract Workflow
+
+The API contract is defined in `api/fermentbox.openapi.yaml`.
+
+Contract ownership rules:
+
+- The OpenAPI file is the source of truth for endpoint and schema changes.
+- Backend and frontend updates should be made after the contract is updated.
+- Frontend contract artifacts are generated from the OpenAPI file.
+
+Current generation and validation commands (frontend workspace):
+
+- `yarn api:validate`
+- `yarn api:generate`
+- `yarn api:check`
+
 ## 7. Current Architectural Constraints and Gaps
 
 - Schedule engine is only partially implemented (load/parse without timed execution).

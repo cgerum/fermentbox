@@ -34,7 +34,13 @@ jobs:
           cache-dependency-path: fermentbox-frontend/yarn.lock
 
       - name: Install dependencies
-        run: yarn install --frozen-lockfile --ignore-engines
+        run: yarn install --ignore-engines
+
+      - name: API contract check
+        run: yarn api:check
+
+      - name: Verify generated API artifacts are committed
+        run: yarn api:verify-fresh
 
       - name: Lint
         run: yarn lint

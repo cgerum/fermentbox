@@ -2,14 +2,33 @@
 
 #include <SmingCore.h>
 
+#ifdef ARCH_ESP8266
+extern "C" {
+#include <espconn.h>
+}
+#endif
+
 void startMDNS() {
-  struct mdns_info *info =
-      (struct mdns_info *)os_zalloc(sizeof(struct mdns_info));
-  info->host_name =
-      (char *)"fermentbox"; // You can replace test with your own host name
-  info->ipAddr = WifiStation.getIP();
-  info->server_name = (char *)"Sming";
-  info->server_port = 80;
-  info->txt_data[0] = (char *)"version = now";
-  espconn_mdns_init(info);
+#ifdef ARCH_ESP8266
+  static mdns_info info;
+  static char hostName[] = "fermentbox";
+  static char serverName[] = "fermentbox";
+  static char txtVersion[] = "version=now";
+  IpAddress stationIp = WifiStation.getIP();
+
+  memset(&info, 0, sizeof(info));
+  info.host_name = hostName;
+  info.ipAddr = stationIp;
+  info.server_name = serverName;
+  info.server_port = 80;
+  info.txt_data[0] = txtVersion;
+
+  espconn_mdns_init(&info);
+  espconn_mdns_enable();
+
+  debugf("mDNS started as %s.local on %s", hostName,
+         stationIp.toString().c_str());
+#else
+  debugf("mDNS not started: only supported on ESP8266 target");
+#endif
 }

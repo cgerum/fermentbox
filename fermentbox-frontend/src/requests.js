@@ -27,7 +27,7 @@ function sendRequest(url, params = {}, body = "") {
       type = "POST";
     }
 
-    if (params !== {}) {
+    if (Object.keys(params).length > 0) {
       const query_data = encodeQueryData(params);
       url = url + "?" + query_data;
     }

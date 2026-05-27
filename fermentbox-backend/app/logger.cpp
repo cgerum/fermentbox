@@ -69,7 +69,8 @@ public:
           fileDelete(LOG_FILE_OLD);
         }
         fileRename(LOG_FILE, LOG_FILE_OLD);
-        stream.open(LOG_FILE, eFO_ReadWrite | eFO_CreateIfNotExist);
+        stream.open(LOG_FILE, IFS::OpenFlag::Read | IFS::OpenFlag::Write |
+                                  IFS::OpenFlag::Create);
       }
 
       local_pos = 0;
@@ -79,7 +80,8 @@ public:
   }
 
   void run() {
-    stream.open(LOG_FILE, eFO_ReadWrite | eFO_CreateIfNotExist);
+    stream.open(LOG_FILE, IFS::OpenFlag::Read | IFS::OpenFlag::Write |
+                              IFS::OpenFlag::Create);
     stream.seek(stream.getSize());
     if (!stream.isValid()) {
       debugf("Could not initialize logging\n");

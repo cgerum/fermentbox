@@ -1,37 +1,54 @@
 import sendRequest from "../requests.js";
+import operations from "./api-generated.js";
+
+function callOperation(operationId, options = {}) {
+    const operation = operations[operationId];
+    if (!operation) {
+        return Promise.reject(new Error(`Unknown API operation: ${operationId}`));
+    }
+
+    const params = options.params || {};
+    const body = operation.hasBody ? (options.body || "") : "";
+
+    return sendRequest(operation.path, params, body);
+}
 
 const apiService = {
     getMeasurement() {
-        return sendRequest("getMeasurement");
+        return callOperation("getMeasurement");
     },
 
     getStatus() {
-        return sendRequest("getStatus");
+        return callOperation("getStatus");
     },
 
     getConfig() {
-        return sendRequest("getConfig");
+        return callOperation("getConfig");
     },
 
     schedule: {
         list() {
-            return sendRequest("schedule/list");
+            return callOperation("listSchedules");
         },
 
         load(name) {
-            return sendRequest("schedule/load", { name });
+            return callOperation("loadSchedule", { params: { name } });
         },
 
         save(name, body = "[]") {
-            return sendRequest("schedule/save", { name }, body);
+            return callOperation("saveSchedule", { params: { name }, body });
         },
 
         remove(name) {
-            return sendRequest("schedule/delete", { name });
+            return callOperation("deleteSchedule", { params: { name } });
         },
 
         start(name) {
-            return sendRequest("schedule/start", { name });
+            return callOperation("startSchedule", { params: { name } });
+        },
+
+        stop() {
+            return callOperation("stopSchedule");
         }
     }
 };

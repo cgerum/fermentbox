@@ -131,7 +131,8 @@ void onScheduleSave(HttpRequest &request, HttpResponse &response) {
     debugf("Filename to long");
     return;
   }
-  FileStream stream(filename, eFO_WriteOnly | eFO_CreateNewAlways);
+  FileStream stream(filename, IFS::OpenFlag::Write | IFS::OpenFlag::Create |
+                                  IFS::OpenFlag::Truncate);
 
   String body = request.getBody();
 
@@ -181,10 +182,20 @@ void onScheduleStop(HttpRequest &request, HttpResponse &response) {
 void onScheduleList(HttpRequest &request, HttpResponse &response) {
   String result;
   result += String("[");
-  auto files = fileList();
+
+  Directory directory;
+  if (!directory.open()) {
+    response.code = HTTP_STATUS_INTERNAL_SERVER_ERROR;
+    return;
+  }
+
   int count = 0;
-  for (int i = 0; i < files.size(); i++) {
-    auto filename = files[i];
+  while (directory.next()) {
+    if (directory.stat().isDir()) {
+      continue;
+    }
+
+    String filename = directory.stat().name.c_str();
     if (filename.startsWith(".sch-")) {
       if (count > 0) {
         result += String(",");

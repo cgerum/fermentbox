@@ -1,5 +1,10 @@
 all: frontend backend
 
+.PHONY: api-contract
+api-contract:
+	cd fermentbox-frontend && yarn install --ignore-engines
+	cd fermentbox-frontend && yarn api:check
+
 .PHONY: test-frontend
 test-frontend:
 	cd fermentbox-frontend && yarn install --ignore-engines
@@ -8,6 +13,7 @@ test-frontend:
 .PHONY: frontend
 frontend:
 	cd fermentbox-frontend && yarn install
+	cd fermentbox-frontend && yarn api:check
 	cd fermentbox-frontend && yarn build
 	rm -rf fermentbox-backend/files
 	mkdir -p fermentbox-backend/files
@@ -24,7 +30,7 @@ frontend:
 
 .PHONY: backend
 backend:
-	make -C fermentbox-backend spiffs-image-update
+	make -C fermentbox-backend buildpart
 	make -C fermentbox-backend rebuild
 
 

@@ -34,7 +34,7 @@ public:
       auto array = scheduleDoc.as<JsonArray>();
       for (JsonVariant v : array) {
         const auto object = v.as<JsonObject>();
-        auto duration = object.getMember("duration").as<int>();
+        auto duration = object["duration"].as<int>();
         debugf("duration: %i\n", duration);
       }
     }

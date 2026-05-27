@@ -11,9 +11,10 @@ class MockXHR {
         this.headers = {};
     }
 
-    open(method, url) {
+    open(method, url, asyncFlag) {
         this.method = method;
         this.url = url;
+        this.asyncFlag = asyncFlag;
     }
 
     setRequestHeader(key, value) {
@@ -66,5 +67,29 @@ describe("sendRequest", () => {
         xhr.onreadystatechange();
 
         await expect(promise).rejects.toBe("Internal Error");
+    });
+
+    it("sends GET without trailing query when params are empty", () => {
+        sendRequest("getStatus");
+
+        expect(xhr.method).toBe("GET");
+        expect(xhr.url).toBe("getStatus");
+        expect(xhr.asyncFlag).toBe(true);
+    });
+
+    it("encodes query parameters for GET requests", () => {
+        sendRequest("schedule/load", { name: "My Schedule" });
+
+        expect(xhr.method).toBe("GET");
+        expect(xhr.url).toBe("schedule/load?name=My%20Schedule");
+    });
+
+    it("switches to POST and sends JSON body", () => {
+        sendRequest("schedule/save", { name: "A" }, "[]");
+
+        expect(xhr.method).toBe("POST");
+        expect(xhr.url).toBe("schedule/save?name=A");
+        expect(xhr.headers["Content-Type"]).toBe("application/json");
+        expect(xhr.body).toBe("[]");
     });
 });
