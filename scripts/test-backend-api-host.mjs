@@ -24,12 +24,26 @@ const skipBuild = process.env.SKIP_HOST_BUILD === "1";
 const hostBuildArgs = ["SMING_ARCH=Host", "HWCONFIG=spiffs"];
 
 const scheduleName = `apitest-${Date.now()}`;
-const scheduleBody = JSON.stringify({
-  tasks: [
-    { targetTemperature: 18.5, durationMinutes: 60 },
-    { targetTemperature: 20.0, durationMinutes: 120 }
-  ]
-});
+const scheduleBody = JSON.stringify([
+  {
+    duration: 0.5,
+    temperature_active: true,
+    temperature_start: 18.5,
+    temperature_end: 18.5,
+    humidity_active: true,
+    humidity_start: 65,
+    humidity_end: 65
+  },
+  {
+    duration: 0.5,
+    temperature_active: true,
+    temperature_start: 20.0,
+    temperature_end: 20.0,
+    humidity_active: true,
+    humidity_start: 70,
+    humidity_end: 70
+  }
+]);
 
 async function run(command, args, options = {}) {
   const child = spawn(command, args, {
@@ -242,6 +256,17 @@ async function main() {
     const configAfterUpdate = await readJson("/getConfig");
     assert.equal(configAfterUpdate.Wifi.SSID, "HostApiTestSSID");
     assert.equal(configAfterUpdate.Wifi.Password, "HostApiTestPassword");
+
+    const scheduleListBeforeSave = await readJson("/schedule/list");
+    assert.equal(Array.isArray(scheduleListBeforeSave), true, "schedule list before create should be an array");
+    assert.equal(
+      scheduleListBeforeSave.includes(scheduleName),
+      false,
+      "new schedule name should not exist before create"
+    );
+
+    const scheduleLoadBeforeCreate = await request(`/schedule/load?name=${encodeURIComponent(scheduleName)}`);
+    assert.equal(scheduleLoadBeforeCreate.ok, false, "loading a new schedule name before create should fail");
 
     const scheduleSaveRaw = await postJsonRaw(
       `/schedule/save?name=${encodeURIComponent(scheduleName)}`,

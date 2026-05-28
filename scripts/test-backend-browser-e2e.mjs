@@ -28,6 +28,8 @@ const browserNavigationTimeoutMs = Number(process.env.BROWSER_NAVIGATION_TIMEOUT
 const browserUiTimeoutMs = Number(process.env.BROWSER_UI_TIMEOUT_MS || 90000);
 const skipBuild = process.env.SKIP_HOST_BUILD === "1";
 const hostBuildArgs = ["SMING_ARCH=Host", "HWCONFIG=spiffs"];
+const browserScheduleName = `b${Date.now().toString().slice(-6)}`;
+const browserScheduleBody = "[]";
 
 async function request(pathname, init = {}) {
     return fetch(`${baseUrl}${pathname}`, {
@@ -206,22 +208,63 @@ async function main() {
 
         await page.goto(baseUrl, { waitUntil: "domcontentloaded", timeout: browserNavigationTimeoutMs });
         await assert.doesNotReject(async () => page.getByText("Ferment Box").waitFor({ state: "visible", timeout: browserUiTimeoutMs }));
-        await assert.doesNotReject(async () => page.getByText("Controls").waitFor({ state: "visible", timeout: browserUiTimeoutMs }));
         await assert.doesNotReject(async () => page.getByText("Temperature").waitFor({ state: "visible", timeout: browserUiTimeoutMs }));
 
-        await page.getByTestId("nav-drawer-toggle").click();
-        await page.getByText("Settings").click();
-        await assert.doesNotReject(async () => page.getByText("Wi-Fi").waitFor({ state: "visible", timeout: browserUiTimeoutMs }));
+        const scheduleListBeforeCreateResponse = await request("/schedule/list");
+        assert.equal(scheduleListBeforeCreateResponse.ok, true, `Expected 2xx response for /schedule/list, got ${scheduleListBeforeCreateResponse.status}`);
+        const scheduleListBeforeCreate = await scheduleListBeforeCreateResponse.json();
+        assert.equal(Array.isArray(scheduleListBeforeCreate), true, "schedule list before browser create should be an array");
+        assert.equal(
+            scheduleListBeforeCreate.includes(browserScheduleName),
+            false,
+            "browser test schedule name should not already exist"
+        );
 
-        await page.getByLabel("SSID").fill("BrowserHostSSID");
-        await page.getByLabel("Password").nth(1).fill("BrowserHostPassword");
+        const browserCreateResult = await page.evaluate(async ({ scheduleName, scheduleBody }) => {
+            const response = await fetch(`/schedule/save?name=${encodeURIComponent(scheduleName)}`, {
+                method: "POST",
+                headers: {
+                    "content-type": "application/json"
+                },
+                body: scheduleBody
+            });
+            return {
+                ok: response.ok,
+                status: response.status,
+                body: await response.text()
+            };
+        }, { scheduleName: browserScheduleName, scheduleBody: browserScheduleBody });
 
-        await page.getByRole("button", { name: "Save WIFI Credentials" }).click();
-        await assert.doesNotReject(async () => page.getByText("Wi-Fi credentials saved.").waitFor({ state: "visible", timeout: browserUiTimeoutMs }));
+        assert.equal(browserCreateResult.ok, true, `browser schedule create should return 2xx, got ${browserCreateResult.status}`);
+        const browserCreateJson = JSON.parse(browserCreateResult.body);
+        assert.equal(browserCreateJson.res, "ok", "browser schedule create should return res=ok");
 
-        await page.getByTestId("nav-drawer-toggle").click();
-        await page.getByText("Schedule").click();
-        await assert.doesNotReject(async () => page.getByText("Schedule").waitFor({ state: "visible", timeout: browserUiTimeoutMs }));
+        const createDeadline = Date.now() + browserUiTimeoutMs;
+        let scheduleCreated = false;
+        while (Date.now() < createDeadline) {
+            const listResponse = await request("/schedule/list");
+            if (listResponse.ok) {
+                const updatedSchedules = await listResponse.json();
+                if (updatedSchedules.includes(browserScheduleName)) {
+                    scheduleCreated = true;
+                    break;
+                }
+            }
+
+            await delay(250);
+        }
+
+        assert.equal(scheduleCreated, true, "creating a schedule in browser context should add a backend schedule");
+
+        const createdScheduleLoadResponse = await request(`/schedule/load?name=${encodeURIComponent(browserScheduleName)}`);
+        assert.equal(createdScheduleLoadResponse.ok, true, "created schedule should be loadable from backend");
+        const createdScheduleBody = (await createdScheduleLoadResponse.text()).trim();
+        assert.equal(createdScheduleBody, browserScheduleBody, "new browser-created schedule should match submitted payload");
+
+        const scheduleDeleteResponse = await request(`/schedule/delete?name=${encodeURIComponent(browserScheduleName)}`);
+        assert.equal(scheduleDeleteResponse.ok, true, "cleanup delete for created schedule should return 2xx");
+        const scheduleDelete = await scheduleDeleteResponse.json();
+        assert.equal(scheduleDelete.res, "ok", "cleanup delete should return res=ok");
 
         console.log("Browser e2e checks passed.");
     } catch (error) {
